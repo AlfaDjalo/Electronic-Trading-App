@@ -5,9 +5,9 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
 class StockData:
-    def __init__(self, tickers, start_date='2018-12-31', end_date='2020-12-31'):
+    def __init__(self, ticker, start_date='2014-12-31', end_date='2024-12-31'):
         """ Initialise StockData object by loading data"""
-        self.ticker = tickers
+        self.ticker = ticker
         self.start_date = start_date
         self.end_date = end_date
         self.data = None
