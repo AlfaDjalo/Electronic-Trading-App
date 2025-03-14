@@ -41,7 +41,7 @@ class StockData:
         return self.data
 
     def print_stats_tests(self):
-        """ Prints results of Augmented Dcikey-Fuller test. """
+        """ Prints results of Augmented Dickey-Fuller test. """
         adf, p, usedlag, nobs, cvs, aic = sm.tsa.stattools.adfuller(self.data['close'])
         adf_results_string = 'ADF: {}\np-value: {},\nN: {}, \ncritical values: {}'
         print(adf_results_string.format(adf, p, nobs, cvs))

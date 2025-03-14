@@ -5,6 +5,7 @@ from StockData import StockData
 import matplotlib.pyplot as plt
 import io
 import base64
+from models import regression
 
 def setup_routes(app):
     app.secret_key = 'your_secret_key'  # Add a secret key for session management
@@ -44,6 +45,14 @@ def setup_routes(app):
 
         algorithm = request.form['algorithm']
         if algorithm == 'regression':
+            plt = regression(stock_data.get_data(), '2022-12-31')
+            img = io.BytesIO()
+            plt.savefig(img, format='png')
+            img.seek(0)
+            plot_url = base64.b64encode(img.getvalue()).decode()
+            plt.close()
+            return render_template('result.html', plot_url=plot_url)
+        elif algorithm == 'banana':    
             df = stock_data.get_data()
             df['min_1_close'] = df['close'].shift(1)
             df.dropna(inplace=True)
