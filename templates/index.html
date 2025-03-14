@@ -1,39 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <!-- Other head elements -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
-</head>
-<body>
-    <!-- Other body elements -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <form action="/load_data" method="post">
-        <div class="form-group">
-            <label for="ticker">Ticker</label>
-            <select class="form-control" id="ticker" name="ticker">
-                {% for ticker in tickers %}
-                    <option value="{{ ticker.Code }}">{{ ticker.Company }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="start_date">Start Date</label>
-            <input type="text" class="form-control datepicker" id="start_date" name="start_date" value="2014-12-31">
-        </div>
-        <div class="form-group">
-            <label for="end_date">End Date</label>
-            <input type="text" class="form-control datepicker" id="end_date" name="end_date" value="2024-12-31">
-        </div>
-        <button type="submit" class="btn btn-primary">Load Data</button>
-    </form>
+{% extends "base.html" %}
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
-    <script>
-        $(document).ready(function(){
-            $('.datepicker').datepicker({
-                format: 'yyyy-mm-dd'
-            });
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<form action="/load_data" method="post">
+    <div class="form-group">
+        <label for="ticker">Ticker</label>
+        <select class="form-control" id="ticker" name="ticker">
+            {% for ticker in tickers %}
+                <option value="{{ ticker.Code }}">{{ ticker.Company }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="start_date">Start Date</label>
+        <input type="text" class="form-control datepicker" id="start_date" name="start_date" value="2014-12-31">
+    </div>
+    <div class="form-group">
+        <label for="end_date">End Date</label>
+        <input type="text" class="form-control datepicker" id="end_date" name="end_date" value="2024-12-31">
+    </div>
+    <button type="submit" class="btn btn-primary">Load Data</button>
+</form>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+<script>
+    $(document).ready(function(){
+        $('.datepicker').datepicker({
+            format: 'yyyy-mm-dd'
         });
-    </script>
-</body>
-</html>
+    });
+</script>
+{% endblock %}

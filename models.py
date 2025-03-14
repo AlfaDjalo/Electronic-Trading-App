@@ -52,21 +52,35 @@ def regression(df, train_date='2022-12-31'):
     # Make predictions using the testing set
     y_pred = regr.predict(X_test)
 
-    # The mean squared error
-    print('Root Mean Squared Error: {0:.2f}'.format(np.sqrt(mean_squared_error(y_test, y_pred))))
-
-    # Explained variance score: 1 is perfect prediction
-    print('Variance Score: {0:.2f}'.format(r2_score(y_test, y_pred)))
+    y_test_min = np.min(y_test)
+    y_test_max = np.max(y_test) 
+    y_pred_min = np.min(y_pred)
+    y_pred_max = np.max(y_pred) 
 
     plt.scatter(y_test, y_pred)
-    plt.plot([5, 15], [5, 15], 'r--', label='perfect fit')
+    plt.plot([y_test_min, y_test_max], [y_pred_min, y_pred_max], 'r--', label='perfect fit')
     plt.xlabel('Actual')
     plt.ylabel('Predicted')
     plt.legend()
 
-    print('Root Mean Squared Error: {0:.2f}'.format(np.sqrt(mean_squared_error(y_test, X_test.min_1_close))))
+    # The mean squared error
+    # print('Root Mean Squared Error: {0:.2f}'.format(np.sqrt(mean_squared_error(y_test, y_pred))))
 
-    return plt
+    # Explained variance score: 1 is perfect prediction
+    # print('Variance Score: {0:.2f}'.format(r2_score(y_test, y_pred)))
+
+    # print('Root Mean Squared Error: {0:.2f}'.format(np.sqrt(mean_squared_error(y_test, X_test.min_1_close))))
+
+    # stats = {}
+    # stats['RMSE'] = np.sqrt(mean_squared_error(y_test, X_test.min_1_close))
+    # stats['Variance'] = r2_score(y_test, y_pred)
+
+    stats = {
+        'RMSE': f"{np.sqrt(mean_squared_error(y_test, X_test.min_1_close)):.2f}",
+        'Variance': f"{r2_score(y_test, y_pred):.2f}"
+    }
+
+    return stats, plt
 
 
 

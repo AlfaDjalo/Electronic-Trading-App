@@ -1,17 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Algorithm Result</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}Algorithm Result{% endblock %}
+
+{% block content %}
     <h1>Algorithm Result</h1>
     {% if plot_url %}
-    <img src="data:image/png;base64,{{ plot_url }}" alt="Result Chart">
+        <img src="data:image/png;base64,{{ plot_url }}" alt="Result Chart">
+    {% endif %}
+    {% if stats %}
+        <pre>
+        {% for key, value in stats.items() %}
+            {{ key }}: {{ value }}
+        {% endfor %}
+        </pre>
     {% endif %}
     {% if stats_results %}
-    <pre>{{ stats_results }}</pre>
+        <pre>{{ stats_results }}</pre>
     {% endif %}
-</body>
-</html>
+{% endblock %}
