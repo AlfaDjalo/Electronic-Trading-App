@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for
+from flask import render_template, request, redirect, url_for, session
 import pandas as pd
 import numpy as np
 from StockData import StockData
@@ -7,6 +7,8 @@ import io
 import base64
 
 def setup_routes(app):
+    app.secret_key = 'your_secret_key'  # Add a secret key for session management
+    
     @app.route("/")
     def index():
         asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
@@ -19,7 +21,13 @@ def setup_routes(app):
         selected_ticker +=  '.AX'        
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
-        stock_data = StockData(selected_ticker, start_date, end_date)
+
+        # Store data in session
+        session['selected_ticker'] = selected_ticker
+        session['start_date'] = start_date
+        session['end_date'] = end_date
+
+        # stock_data = StockData(selected_ticker, start_date, end_date)
         return redirect(url_for('select_algorithm'))
 
     @app.route('/select_algorithm')
@@ -28,6 +36,12 @@ def setup_routes(app):
 
     @app.route('/run_algorithm', methods=['POST'])
     def run_algorithm():
+        selected_ticker = session.get('selected_ticker')
+        start_date = session.get('start_date')
+        end_date = session.get('end_date')
+
+        stock_data = StockData(selected_ticker, start_date, end_date)
+
         algorithm = request.form['algorithm']
         if algorithm == 'regression':
             df = stock_data.get_data()
@@ -53,4 +67,7 @@ def setup_routes(app):
             plt.close()
             
             return render_template('result.html', plot_url=plot_url)
+        elif algorithm == 'stats_tests':
+            stats_results = stock_data.get_stats_tests()
+            return render_template('result.html', stats_results=stats_results)
         return "Algorithm not implemented", 400

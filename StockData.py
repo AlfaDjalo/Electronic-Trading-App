@@ -67,6 +67,25 @@ class StockData:
 
         return 
 
+    def get_stats_tests(self):
+        """ Returns results of Augmented Dickey-Fuller test as a string. """
+        adf, p, usedlag, nobs, cvs, aic = sm.tsa.stattools.adfuller(self.data['close'])
+        adf_results_string = 'ADF: {}\np-value: {},\nN: {}, \ncritical values: {}'.format(adf, p, nobs, cvs)
+
+        pacf = sm.tsa.stattools.pacf(self.data['close'], nlags=30)
+        T = len(self.data['close'])
+
+        sig_test = lambda tau_h: np.abs(tau_h) > 2.58/np.sqrt(T)
+
+        n_steps = None
+        for i in range(len(pacf)):
+            if sig_test(pacf[i]) == False:
+                n_steps = i - 1
+                break
+
+        pacf_results_string = 'PACF n_steps: {}'.format(n_steps)
+        return adf_results_string + '\n' + pacf_results_string
+
     def load_data(self):
 
         try:

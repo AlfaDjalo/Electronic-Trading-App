@@ -7,6 +7,11 @@
 </head>
 <body>
     <h1>Algorithm Result</h1>
+    {% if plot_url %}
     <img src="data:image/png;base64,{{ plot_url }}" alt="Result Chart">
+    {% endif %}
+    {% if stats_results %}
+    <pre>{{ stats_results }}</pre>
+    {% endif %}
 </body>
 </html>
