@@ -5,7 +5,7 @@ from StockData import StockData
 import matplotlib.pyplot as plt
 import io
 import base64
-from models import regression
+from models import regression, regression_on_trend
 
 def setup_routes(app):
     app.secret_key = 'your_secret_key'  # Add a secret key for session management
@@ -60,7 +60,24 @@ def setup_routes(app):
                 print("ERROR: stats is not a dictionary!", type(stats))
 
             return render_template('result.html', plot_url=plot_url, stats=stats)
-        elif algorithm == 'banana':    
+        elif algorithm == 'regression_on_trend':   
+            stats, plt = regression_on_trend(stock_data.get_data(), '2022-12-31')
+            img = io.BytesIO()
+            plt.savefig(img, format='png')
+            img.seek(0)
+            plot_url = base64.b64encode(img.getvalue()).decode()
+            plt.close()
+  
+            stats = {key: float(value) if isinstance(value, np.float64) else value for key, value in stats.items()}
+
+            print(f"Stats type before passing to template: {type(stats)}")
+            print(f"Stats content before passing to template: {stats}")
+
+            if not isinstance(stats, dict):
+                print("ERROR: stats is not a dictionary!", type(stats))
+
+            return render_template('result.html', plot_url=plot_url, stats=stats)
+        elif algorithm == 'banana':
             df = stock_data.get_data()
             df['min_1_close'] = df['close'].shift(1)
             df.dropna(inplace=True)

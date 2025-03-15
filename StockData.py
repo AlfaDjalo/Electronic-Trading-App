@@ -40,32 +40,32 @@ class StockData:
         """ Return the dataframe with all indicators added. """
         return self.data
 
-    def print_stats_tests(self):
-        """ Prints results of Augmented Dickey-Fuller test. """
-        adf, p, usedlag, nobs, cvs, aic = sm.tsa.stattools.adfuller(self.data['close'])
-        adf_results_string = 'ADF: {}\np-value: {},\nN: {}, \ncritical values: {}'
-        print(adf_results_string.format(adf, p, nobs, cvs))
+    # def print_stats_tests(self):
+    #     """ Prints results of Augmented Dickey-Fuller test. """
+    #     adf, p, usedlag, nobs, cvs, aic = sm.tsa.stattools.adfuller(self.data['close'])
+    #     adf_results_string = 'ADF: {}\np-value: {},\nN: {}, \ncritical values: {}'
+    #     print(adf_results_string.format(adf, p, nobs, cvs))
 
-        pacf = sm.tsa.stattools.pacf(self.data['close'], nlags=30)
-        T = len(self.data['close'])
+    #     pacf = sm.tsa.stattools.pacf(self.data['close'], nlags=30)
+    #     T = len(self.data['close'])
 
-        sig_test = lambda tau_h: np.abs(tau_h) > 2.58/np.sqrt(T)
+    #     sig_test = lambda tau_h: np.abs(tau_h) > 2.58/np.sqrt(T)
 
-        for i in range(len(pacf)):
-            if sig_test(pacf[i]) == False:
-                n_steps = i - 1
-                print('n_steps set to', n_steps)
-                break
+    #     for i in range(len(pacf)):
+    #         if sig_test(pacf[i]) == False:
+    #             n_steps = i - 1
+    #             print('n_steps set to', n_steps)
+    #             break
 
-        plt.plot(pacf, label='pacf')
-        plt.plot([2.58/np.sqrt(T)]*30, label='99% confidence interval (upper)')
-        plt.plot([-2.58/np.sqrt(T)]*30, label='99% confidence interval (lower)')
-        plt.xlabel('number of lags')
-        plt.xticks(np.arange(0, 30, 2))
-        plt.legend()
-        plt.show()
+    #     plt.plot(pacf, label='pacf')
+    #     plt.plot([2.58/np.sqrt(T)]*30, label='99% confidence interval (upper)')
+    #     plt.plot([-2.58/np.sqrt(T)]*30, label='99% confidence interval (lower)')
+    #     plt.xlabel('number of lags')
+    #     plt.xticks(np.arange(0, 30, 2))
+    #     plt.legend()
+    #     plt.show()
 
-        return 
+    #     return 
 
     def get_stats_tests(self):
         """ Returns results of Augmented Dickey-Fuller test as a string. """
