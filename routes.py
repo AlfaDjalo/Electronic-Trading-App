@@ -5,7 +5,7 @@ from StockData import StockData
 import matplotlib.pyplot as plt
 import io
 import base64
-from models import regression, regression_on_trend
+from models import regression, regression_on_trend, ML_regression
 
 def setup_routes(app):
     app.secret_key = 'your_secret_key'  # Add a secret key for session management
@@ -77,6 +77,8 @@ def setup_routes(app):
                 print("ERROR: stats is not a dictionary!", type(stats))
 
             return render_template('result.html', plot_url=plot_url, stats=stats)
+        elif algorithm == 'ml_regression':   
+            ML_regression(stock_data.get_data(), "RNN", train_date='2022-12-31', do_training=False)
         elif algorithm == 'banana':
             df = stock_data.get_data()
             df['min_1_close'] = df['close'].shift(1)
