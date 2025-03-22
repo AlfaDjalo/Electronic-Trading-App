@@ -5,7 +5,8 @@ from StockData import StockData
 import matplotlib.pyplot as plt
 import io
 import base64
-from models import regression, regression_on_trend, ML_regression
+from models import ModelHandler
+# from models import regression, regression_on_trend, ML_regression, ModelHandler
 
 def setup_routes(app):
     app.secret_key = 'your_secret_key'  # Add a secret key for session management
@@ -41,69 +42,31 @@ def setup_routes(app):
         end_date = session.get('end_date')
 
         stock_data = StockData(selected_ticker, start_date, end_date)
+        model_handler = ModelHandler(stock_data.get_data(), train_date='2022-12-31')
 
         algorithm = request.form['algorithm']
         if algorithm == 'regression':
-            stats, plt = regression(stock_data.get_data(), '2022-12-31')
-            img = io.BytesIO()
-            plt.savefig(img, format='png')
-            img.seek(0)
-            plot_url = base64.b64encode(img.getvalue()).decode()
-            plt.close()
-  
-            stats = {key: float(value) if isinstance(value, np.float64) else value for key, value in stats.items()}
+            model_handler.regression()
+            stats = model_handler.get_stats()
+            plt = model_handler.get_plt()
+            # stats, plt = model_handler.regression()
+        elif algorithm == 'regression_on_trend':
+            # stats, plt = model_handler.regression_on_trend()
+            model_handler.regression_on_trend()
+            stats = model_handler.get_stats()
+            plt = model_handler.get_plt()
+        elif algorithm == 'ml_regression':
+            # stats, plt = model_handler.ml_regression(do_training=False)
+            model_handler.ml_regression(do_training=False)
+            stats = model_handler.get_stats()
+            plt = model_handler.get_plt()
+        else:
+            return "Algorithm not implemented", 400
 
-            print(f"Stats type before passing to template: {type(stats)}")
-            print(f"Stats content before passing to template: {stats}")
+        img = io.BytesIO()
+        plt.savefig(img, format='png')
+        img.seek(0)
+        plot_url = base64.b64encode(img.getvalue()).decode()
+        plt.close()
 
-            if not isinstance(stats, dict):
-                print("ERROR: stats is not a dictionary!", type(stats))
-
-            return render_template('result.html', plot_url=plot_url, stats=stats)
-        elif algorithm == 'regression_on_trend':   
-            stats, plt = regression_on_trend(stock_data.get_data(), '2022-12-31')
-            img = io.BytesIO()
-            plt.savefig(img, format='png')
-            img.seek(0)
-            plot_url = base64.b64encode(img.getvalue()).decode()
-            plt.close()
-  
-            stats = {key: float(value) if isinstance(value, np.float64) else value for key, value in stats.items()}
-
-            print(f"Stats type before passing to template: {type(stats)}")
-            print(f"Stats content before passing to template: {stats}")
-
-            if not isinstance(stats, dict):
-                print("ERROR: stats is not a dictionary!", type(stats))
-
-            return render_template('result.html', plot_url=plot_url, stats=stats)
-        elif algorithm == 'ml_regression':   
-            ML_regression(stock_data.get_data(), "RNN", train_date='2022-12-31', do_training=False)
-        elif algorithm == 'banana':
-            df = stock_data.get_data()
-            df['min_1_close'] = df['close'].shift(1)
-            df.dropna(inplace=True)
-            X = df[['min_1_close']]
-            y = df['close']
-            from sklearn.linear_model import LinearRegression
-            model = LinearRegression()
-            model.fit(X, y)
-            df['predicted_close'] = model.predict(X)
-            
-            plt.figure(figsize=(10, 5))
-            plt.plot(df.index, df['close'], label='Actual Close')
-            plt.plot(df.index, df['predicted_close'], label='Predicted Close')
-            plt.legend()
-            plt.title(f'{selected_ticker} Close Price Prediction')
-            
-            img = io.BytesIO()
-            plt.savefig(img, format='png')
-            img.seek(0)
-            plot_url = base64.b64encode(img.getvalue()).decode()
-            plt.close()
-            
-            return render_template('result.html', plot_url=plot_url)
-        elif algorithm == 'stats_tests':
-            stats_results = stock_data.get_stats_tests()
-            return render_template('result.html', stats_results=stats_results)
-        return "Algorithm not implemented", 400
+        return render_template('result.html', plot_url=plot_url, stats=stats)

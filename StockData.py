@@ -106,13 +106,13 @@ class StockData:
 
             print(self.ticker, " loaded.")
 
-            nof_missing_values = sum(np.isnan(df['close']))
-            print(nof_missing_values, 'observations are missing.')
-            print('This is {:.3f}% of the total.'.format(nof_missing_values*100/len(df)))
+            # nof_missing_values = sum(np.isnan(df['close']))
+            # print(nof_missing_values, 'observations are missing.')
+            # print('This is {:.3f}% of the total.'.format(nof_missing_values*100/len(df)))
 
-            df['close'] = df['close'].bfill()
-            nof_missing_values = sum(np.isnan(df['close']))
-            print('Now', nof_missing_values, 'observations are missing.')
+            # df['close'] = df['close'].bfill()
+            # nof_missing_values = sum(np.isnan(df['close']))
+            # print('Now', nof_missing_values, 'observations are missing.')
 
             return True
 
