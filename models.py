@@ -1,11 +1,18 @@
 import pandas as pd
 import numpy as np
+import tensorflow as tf
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
-import tensorflow as tf
+
+import keras.initializers
 from keras.models import Sequential
-from keras.layers import Dense, SimpleRNN
+from keras.layers import Dense, Layer, LSTM, GRU, SimpleRNN, RNN
+from keras.regularizers import l1, l2
 from keras.callbacks import EarlyStopping
 
 class ModelHandler:
@@ -36,10 +43,12 @@ class ModelHandler:
 
     def create_lagged_features(self, num_lags):
         """Create lagged features for the regression model."""
-        for i in range(1, num_lags + 1):
-            self.df['min_' + str(i) + '_close'] = self.df['close'].shift(i)
-        # self.df['min_1_close'] = self.df['close'].shift(1)
-        # self.df['min_2_close'] = self.df['close'].shift(2)
+        if num_lags > 0:        
+            for i in range(1, num_lags + 1):
+                self.df['min_' + str(i) + '_close'] = self.df['close'].shift(i)
+        elif num_lags < 0:
+            self.df[f'fut_{-num_lags}_close'] = self.df['close'].shift(num_lags)
+
         self.df.dropna(inplace=True)  # Drop rows with NaN values created by shifting
 
         # Update train_data and test_data with the new features
@@ -79,6 +88,27 @@ class ModelHandler:
         self.Y_test = self.test_data[self.target]
         return # X_train, X_test, y_train, y_test
 
+    def standardise_input(self, feature, drop=False):
+
+        # mu = float(self.X_train[feature].mean())
+        # sigma = float(self.X_train[feature].std())
+        mu = float(self.X_train[feature].iloc[0])
+        sigma = float(self.X_train[feature].iloc[0])
+
+        stdize_input = lambda x: (x - mu) / sigma
+
+        # X_train = X_train.apply(stdize_input)
+        # X_test = X_test.apply(stdize_input)
+
+        self.X_train = (self.X_train - mu) / sigma
+        self.X_test = (self.X_test - mu) / sigma
+
+        if drop==True:
+            self.X_train[feature].drop
+            self.X_test[feature].drop
+        
+        return
+
     def regression(self):
         """Perform simple regression."""
         self.create_lagged_features(2)
@@ -97,79 +127,87 @@ class ModelHandler:
         """Perform regression on trend."""
         self.create_trend_features(3)
  
-        # self.df['min_1_close'] = self.df['close'].shift(1)
-        # self.df['min_2_close'] = self.df['close'].shift(2)
-        # self.df['min_3_close'] = self.df['close'].shift(3)
-        # self.df['min_4_close'] = self.df['close'].shift(4)
-        # self.df['trend_3_day'] = np.where(
-        #     (self.df['min_1_close'] > self.df['min_2_close']) +
-        #     (self.df['min_2_close'] > self.df['min_3_close']) +
-        #     (self.df['min_3_close'] > self.df['min_4_close']) > 0, 1, -1
-        # )
+
         print(self.df.columns)
         self.features = ['min_1_close', 'trend_3_day']
         self.target = ['close']
 
-        # # X_train, X_test, y_train, y_test = self.prepare_features(features, target)
-        # self.prepare_features(features, target)
-        # model = LinearRegression(fit_intercept=True)
-        # model.fit(X_train, y_train)
-
-        # self.features = ['min_1_close', 'min_2_close']
-        # self.target = ['close']
         self.prepare_features()
 
         self.model = LinearRegression(fit_intercept=True)
         self.model.fit(self.X_train, self.Y_train)
-
-
-        # y_pred = model.predict(X_test)
-
-        # stats = {
-        #     'RMSE': f"{np.sqrt(mean_squared_error(y_test, y_pred)):.3f}",
-        #     'Variance': f"{r2_score(y_test, y_pred):.3f}"
-        # }
-
-        # plt.scatter(y_test, y_pred)
-        # plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', label='Perfect Fit')
-        # plt.xlabel('Actual')
-        # plt.ylabel('Predicted')
-        # plt.legend()
-
-        # return stats, plt
 
         return
 
     def ml_regression(self, model_type="rnn", do_training=False):
         """Perform machine learning regression."""
         # Example implementation for RNN
-        self.features = ['close']
-        self.target = ['close']
+        self.create_lagged_features(4)    
+        self.create_lagged_features(-4)
+        print(self.df.columns)
+
+        self.features = ['close', 'min_1_close', 'min_2_close', 'min_3_close', 'min_4_close']
+        self.target = ['fut_4_close']
         self.prepare_features()
-        # X_train, X_test, y_train, y_test = self.prepare_features(features, target)
 
-        self.model = Sequential()
-        self.model.add(SimpleRNN(10, activation='tanh', input_shape=(self.X_train.shape[1], 1)))
-        self.model.add(Dense(1))
-        self.model.compile(optimizer='adam', loss='mean_squared_error')
+        self.standardise_input(['close'], drop=True)
 
-        if do_training:
-            es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
-            self.model.fit(self.X_train, self.Y_train, epochs=50, batch_size=32, callbacks=[es])
+        self.X_train = self.X_train.values.reshape(self.X_train.shape[0], self.X_train.shape[1], 1)
 
-        # y_pred = model.predict(X_test)
-        # stats = {
-        #     'RMSE': f"{np.sqrt(mean_squared_error(y_test, y_pred)):.3f}",
-        #     'Variance': f"{r2_score(y_test, y_pred):.3f}"
-        # }
+        # print(self.X_train)
+        # print(self.Y_train)
 
-        # plt.plot(y_test, label='Actual')
-        # plt.plot(y_pred, label='Predicted')
-        # plt.legend()
+        max_epochs = 2000
+        batch_size = 1000
 
-        # return stats, plt
+        def SimpleRNN_(n_units = 10, l1_reg=0, seed=0):
+            model = Sequential()
+            model.add(SimpleRNN(n_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True, stateful=False))  
+            model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
+            model.compile(loss='mean_squared_error', optimizer='adam')
+            return model
+
+        def LSTM_(n_units = 10, l1_reg=0, seed=0):
+            model = Sequential()
+            model.add(LSTM(n_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True)) 
+            model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
+            model.compile(loss='mean_squared_error', optimizer='adam')
+            return model
+
+        params = {
+            'rnn': {
+                'model': None, 'function': SimpleRNN_, 'l1_reg': 0.0, 'H': 20, 
+                'color': 'blue', 'label':'RNN'}, 
+            'lstm': {
+                'model': None, 'function': LSTM_,'l1_reg': 0.0, 'H': 10, 
+                'color':'red', 'label': 'LSTM'}
+        }
+
+        model_chosen = "lstm"
+        es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
+
+        tf.random.set_seed(0)
+        print('Training', model_chosen, 'model')
+        self.model = params[model_chosen]['function'](params[model_chosen]['H'], params[model_chosen]['l1_reg'])
+        self.model.fit(self.X_train, self.Y_train, epochs=max_epochs, 
+                  batch_size=batch_size, callbacks=[es], shuffle=False)
+        params[model_chosen]['model'] = self.model
+
+
+
+        # self.model = Sequential()
+        # self.model.add(SimpleRNN(10, activation='tanh', input_shape=(self.X_train.shape[1], 1)))
+        # self.model.add(Dense(1))
+        # self.model.compile(optimizer='adam', loss='mean_squared_error')
+
+        # model = params[model_chosen]['function'](params[model_chosen]['H'], params[model_chosen]['l1_reg'])
+        # if do_training:
+        #     es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
+        #     self.model.fit(self.X_train, self.Y_train, epochs=250, batch_size=1000, callbacks=[es])
+            # self.model.fit(self.X_train, self.Y_train, epochs=50, batch_size=32, callbacks=[es])
 
         return
+
 
     def get_stats(self):
         """Calculate stats for the current model."""
@@ -186,6 +224,9 @@ class ModelHandler:
         """Create a plot for the current model."""
         y_pred = self.model.predict(self.X_test) 
         
+        # print(self.X_test)
+        # print(y_pred)
+
         plt.scatter(self.Y_test, y_pred)
         plt.plot([self.Y_test.min(), self.Y_test.max()], [self.Y_test.min(), self.Y_test.max()], 'r--', label='Perfect Fit')
         plt.xlabel('Actual')
@@ -193,6 +234,19 @@ class ModelHandler:
         plt.legend()
 
         return plt
+
+    # def get_fig(self):
+    #     """Create a plot for the current model."""
+    #     fig, ax = plt.subplots()
+    #     y_pred = self.model.predict(self.X_test) 
+        
+    #     ax.scatter(self.Y_test, y_pred)
+    #     ax.plot([self.Y_test.min(), self.Y_test.max()], [self.Y_test.min(), self.Y_test.max()], 'r--', label='Perfect Fit')
+    #     ax.set_xlabel('Actual')
+    #     ax.set_ylabel('Predicted')
+    #     ax.legend()
+
+    #     return fig
 
 
     def prediction(self, input_data):

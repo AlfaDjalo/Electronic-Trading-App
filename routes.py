@@ -2,7 +2,11 @@ from flask import render_template, request, redirect, url_for, session
 import pandas as pd
 import numpy as np
 from StockData import StockData
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 import io
 import base64
 from models import ModelHandler
@@ -10,15 +14,20 @@ from models import ModelHandler
 
 def setup_routes(app):
     app.secret_key = 'your_secret_key'  # Add a secret key for session management
-    
+
     @app.route("/")
     def index():
+        # Initialize the session variable if it doesn't exist
+        if 'comparisons' not in session:
+            session['comparisons'] = {}
+        
         asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
         tickers = asx200[['Code', 'Company']].to_dict(orient="records")
         return render_template("index.html", tickers=tickers)
 
     @app.route('/load_data', methods=['POST'])
     def load_data():
+        session['comparisons'] = {}
         selected_ticker = request.form.get('ticker')
         selected_ticker +=  '.AX'        
         start_date = request.form.get('start_date')
@@ -49,6 +58,7 @@ def setup_routes(app):
             model_handler.regression()
             stats = model_handler.get_stats()
             plt = model_handler.get_plt()
+            # fig = model_handler.get_fig()
             # stats, plt = model_handler.regression()
         elif algorithm == 'regression_on_trend':
             # stats, plt = model_handler.regression_on_trend()
@@ -57,16 +67,25 @@ def setup_routes(app):
             plt = model_handler.get_plt()
         elif algorithm == 'ml_regression':
             # stats, plt = model_handler.ml_regression(do_training=False)
-            model_handler.ml_regression(do_training=False)
+            model_handler.ml_regression(do_training=True)
             stats = model_handler.get_stats()
             plt = model_handler.get_plt()
         else:
             return "Algorithm not implemented", 400
 
+        # img = io.BytesIO()
+        # plt.savefig(img, format='png')
+        # img.seek(0)
+        # plot_url = base64.b64encode(img.getvalue()).decode()
+        # plt.close()
+
+        # fig = model_handler.get_plt()
         img = io.BytesIO()
         plt.savefig(img, format='png')
+        plt.close('all')
+        # plt.close(fig)
+        # plt.close(fig)  # Close just this figure
         img.seek(0)
         plot_url = base64.b64encode(img.getvalue()).decode()
-        plt.close()
 
         return render_template('result.html', plot_url=plot_url, stats=stats)
