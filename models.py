@@ -139,9 +139,18 @@ class ModelHandler:
 
         return
 
-    def ml_regression(self, model_type="rnn", do_training=False):
+    def ml_regression(self, model_type="rnn", do_training=False, parameters=None):
         """Perform machine learning regression."""
-        # Example implementation for RNN
+        if parameters is None:
+            parameters = {}
+
+        # Extract parameters
+        epochs = parameters.get('epochs', 2000)
+        batch_size = parameters.get('batch_size', 1000)
+        n_units = parameters.get('n_units', 10)
+        l1_reg = parameters.get('l1_reg', 0.0)
+        seed = parameters.get('seed', 0)
+
         self.create_lagged_features(4)    
         self.create_lagged_features(-4)
         print(self.df.columns)
@@ -154,20 +163,14 @@ class ModelHandler:
 
         self.X_train = self.X_train.values.reshape(self.X_train.shape[0], self.X_train.shape[1], 1)
 
-        # print(self.X_train)
-        # print(self.Y_train)
-
-        max_epochs = 2000
-        batch_size = 1000
-
-        def SimpleRNN_(n_units = 10, l1_reg=0, seed=0):
+        def SimpleRNN_():
             model = Sequential()
             model.add(SimpleRNN(n_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True, stateful=False))  
             model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
             model.compile(loss='mean_squared_error', optimizer='adam')
             return model
 
-        def LSTM_(n_units = 10, l1_reg=0, seed=0):
+        def LSTM_():
             model = Sequential()
             model.add(LSTM(n_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True)) 
             model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
@@ -175,36 +178,18 @@ class ModelHandler:
             return model
 
         params = {
-            'rnn': {
-                'model': None, 'function': SimpleRNN_, 'l1_reg': 0.0, 'H': 20, 
-                'color': 'blue', 'label':'RNN'}, 
-            'lstm': {
-                'model': None, 'function': LSTM_,'l1_reg': 0.0, 'H': 10, 
-                'color':'red', 'label': 'LSTM'}
+            'rnn': {'function': SimpleRNN_},
+            'lstm': {'function': LSTM_}
         }
 
-        model_chosen = "lstm"
+        model_chosen = model_type
         es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
 
-        tf.random.set_seed(0)
+        tf.random.set_seed(seed)
         print('Training', model_chosen, 'model')
-        self.model = params[model_chosen]['function'](params[model_chosen]['H'], params[model_chosen]['l1_reg'])
-        self.model.fit(self.X_train, self.Y_train, epochs=max_epochs, 
+        self.model = params[model_chosen]['function']()
+        self.model.fit(self.X_train, self.Y_train, epochs=epochs, 
                   batch_size=batch_size, callbacks=[es], shuffle=False)
-        params[model_chosen]['model'] = self.model
-
-
-
-        # self.model = Sequential()
-        # self.model.add(SimpleRNN(10, activation='tanh', input_shape=(self.X_train.shape[1], 1)))
-        # self.model.add(Dense(1))
-        # self.model.compile(optimizer='adam', loss='mean_squared_error')
-
-        # model = params[model_chosen]['function'](params[model_chosen]['H'], params[model_chosen]['l1_reg'])
-        # if do_training:
-        #     es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
-        #     self.model.fit(self.X_train, self.Y_train, epochs=250, batch_size=1000, callbacks=[es])
-            # self.model.fit(self.X_train, self.Y_train, epochs=50, batch_size=32, callbacks=[es])
 
         return
 

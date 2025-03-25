@@ -1,19 +1,23 @@
+""" Manage routes """
+
+# import io
+import base64
+import json
+# import os
+
 from flask import render_template, request, redirect, url_for, session, jsonify
 import pandas as pd
-import numpy as np
-from StockData import StockData
-
+# import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from io import BytesIO
 
-import io
-import base64
 from models import ModelHandler
-import json
-import os
+from stock_data import StockData
 
 def setup_routes(app):
+    """ Setup routes """
     app.secret_key = 'your_secret_key'  # Add a secret key for session management
 
     @app.route("/")
@@ -23,7 +27,7 @@ def setup_routes(app):
             print("Adding comparisons list to session")
             session['comparisons'] = []
             print(session.get('comparisons', []))
-        
+
         asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
         tickers = asx200[['Code', 'Company']].to_dict(orient="records")
         comparisons = session.get('comparisons', [])  # Retrieve the list of comparisons
@@ -32,7 +36,7 @@ def setup_routes(app):
     @app.route('/load_data', methods=['POST'])
     def load_data():
         selected_ticker = request.form.get('ticker')
-        selected_ticker +=  '.AX'        
+        selected_ticker +=  '.AX'
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
 
@@ -89,7 +93,7 @@ def setup_routes(app):
         plt.close('all')
         # plt.close(fig)
         # plt.close(fig)  # Close just this figure
-        img.seek(0)
+        # img.seek(0)
         plot_url = base64.b64encode(img.getvalue()).decode()
 
         return render_template('result.html', plot_url=plot_url, stats=stats)
@@ -101,20 +105,28 @@ def setup_routes(app):
         end_date = request.form.get('end_date')
         model = request.form.get('model')
 
+        # Load full parameter metadata from model_parameters.json
+        with open('model_parameters.json') as f:
+            all_parameters = json.load(f)
+        model_parameters = all_parameters.get(model, {})
+
+        # Initialize the value field for each parameter with its default value
+        for param, metadata in model_parameters.items():
+            metadata['value'] = metadata.get('default')
+
         # Create a new comparison dictionary
         comparison = {
             'ticker': ticker,
             'model': model,
             'start_date': start_date,
-            'end_date': end_date
+            'end_date': end_date,
+            'params': model_parameters  # Include full parameter metadata with initialized values
         }
 
         # Retrieve the list of comparisons from the session
         comparisons = session.get('comparisons', [])
         comparisons.append(comparison)  # Add the dictionary directly
         session['comparisons'] = comparisons  # Save the updated list back to the session
-        print("Comparisons:")
-        print(session['comparisons'])
 
         return redirect(url_for('index'))
 
@@ -132,27 +144,42 @@ def setup_routes(app):
 
         if request.method == 'POST':
             parameters = request.form.to_dict()
-            # Save parameters to JSON file
-            with open('model_parameters.json', 'r+') as f:
-                all_parameters = json.load(f)
-                all_parameters[comparisons[index]['model']] = parameters
-                f.seek(0)
-                json.dump(all_parameters, f, indent=4)
-                f.truncate()
-            comparisons[index]['parameters'] = parameters
+            model_metadata = comparisons[index]['params']
+
+            # Validate inputs and update the value field
+            for param, value in parameters.items():
+                metadata = model_metadata.get(param, {})
+                if not isinstance(metadata, dict):
+                    return f"Invalid metadata for parameter '{param}'", 400
+                if metadata.get("type") == "number":
+                    value = float(value)
+                    if value < metadata.get("min", float('-inf')) or value > metadata.get("max", float('inf')):
+                        return f"Invalid value for {param}", 400
+                elif metadata.get("type") == "category":
+                    if value not in metadata.get("values", []):
+                        return f"Invalid value for {param}", 400
+
+                # Save validated value back to the metadata dictionary
+                metadata['value'] = value
+
+            # Save updated parameters to the comparison and session
+            comparisons[index]['params'] = model_metadata
             session['comparisons'] = comparisons
+
             return redirect(url_for('index'))
 
         model = comparisons[index]['model']
-        with open('model_parameters.json') as f:
-            all_parameters = json.load(f)
-        model_parameters = all_parameters.get(model, {})
-        common_parameters = all_parameters.get('common', {})
+        model_parameters = comparisons[index]['params']
+
+        # Ensure metadata['values'] is a list
+        for param, metadata in model_parameters.items():
+            if metadata.get('type') == 'category' and callable(metadata.get('values')):
+                metadata['values'] = list(metadata['values']())
+
         return render_template(
             'set_parameters.html',
             model=model,
             model_parameters=model_parameters,
-            common_parameters=common_parameters,
             comparison=comparisons[index]
         )
 
@@ -191,27 +218,52 @@ def setup_routes(app):
     def run_comparisons():
         comparisons = session.get('comparisons', [])
         results = []
+        fig, ax = plt.subplots(figsize=(15, 8))
 
         for comparison in comparisons:
             ticker = comparison['ticker']
             start_date = comparison['start_date']
             end_date = comparison['end_date']
             model = comparison['model']
+            parameters = comparison.get('parameters', {})  # Retrieve parameters if available
 
             stock_data = StockData(ticker, start_date, end_date, load_data=True, create_model_data=True)
             model_handler = ModelHandler(stock_data.get_data(), train_date='2022-12-31')
 
-            if model == 'LinearRegression':
-                model_handler.regression()
-            elif model == 'LSTM':
-                model_handler.ml_regression(do_training=True)
-            elif model == 'RNN':
-                model_handler.ml_regression(do_training=True)  # Assuming RNN uses the same method
-            else:
-                results.append({'ticker': ticker, 'model': model, 'error': 'Model not implemented'})
-                continue
+            try:
+                if model == 'LinearRegression':
+                    num_days_lag = int(parameters.get('num_days_lag', 3))
+                    model_handler.create_lagged_features(num_days_lag)
+                    model_handler.regression()
+                elif model in ['LSTM', 'RNN']:
+                    model_handler.ml_regression(model_type=model.lower(), do_training=True, parameters=parameters)
+                else:
+                    results.append({'ticker': ticker, 'model': model, 'error': 'Model not implemented'})
+                    continue
 
-            stats = model_handler.get_stats()
-            results.append({'ticker': ticker, 'model': model, 'stats': stats})
+                stats = model_handler.get_stats()
+                results.append({'ticker': ticker, 'model': model, 'stats': stats})
 
-        return render_template('comparison_results.html', results=results)
+                # Plot predictions vs actual values
+                y_pred = model_handler.model.predict(model_handler.X_test)
+                ax.plot(model_handler.test_data['date'], y_pred, label=f"{ticker} - {model} (Predicted)")
+                ax.plot(model_handler.test_data['date'], model_handler.Y_test, label=f"{ticker} - {model} (Actual)", linestyle='dashed')
+
+            except Exception as e:
+                results.append({'ticker': ticker, 'model': model, 'error': str(e)})
+
+        # Finalize the chart
+        ax.set_title("Comparison of Predictions vs Actual Values")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Values")
+        ax.legend()
+        plt.xticks(rotation=45)
+
+        # Save chart to a base64 string
+        img = BytesIO()
+        plt.savefig(img, format='png', bbox_inches='tight')
+        img.seek(0)
+        chart_url = base64.b64encode(img.getvalue()).decode()
+        plt.close()
+
+        return render_template('comparison_results.html', results=results, chart_url=chart_url)
