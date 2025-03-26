@@ -228,12 +228,23 @@ def setup_routes(app):
             parameters = comparison.get('parameters', {})  # Retrieve parameters if available
 
             stock_data = StockData(ticker, start_date, end_date, load_data=True, create_model_data=True)
-            model_handler = ModelHandler(stock_data.get_data(), train_date='2022-12-31')
-
+            features = stock_data.create_feature_list(comparison)
+            # print("Feature list")
+            # print(features)
+            target = stock_data.create_target(comparison)
+            # print("Target")
+            # print(target)
+            # model_handler = ModelHandler(stock_data.get_data(), train_date='2022-12-31')
+            stock_data.split_data()
+            ML_data = stock_data.get_data2()
+            model_handler = ModelHandler(ML_data, parameters)
+            # print("x_train") 
+            # print(ML_data['x_train'])
+    
             try:
                 if model == 'LinearRegression':
-                    num_days_lag = int(parameters.get('num_days_lag', 3))
-                    model_handler.create_lagged_features(num_days_lag)
+                    # num_days_lag = int(parameters.get('num_days_lag', 3))
+                    # model_handler.create_lagged_features(num_days_lag)
                     model_handler.regression()
                 elif model in ['LSTM', 'RNN']:
                     model_handler.ml_regression(model_type=model.lower(), do_training=True, parameters=parameters)
@@ -245,9 +256,10 @@ def setup_routes(app):
                 results.append({'ticker': ticker, 'model': model, 'stats': stats})
 
                 # Plot predictions vs actual values
-                y_pred = model_handler.model.predict(model_handler.X_test)
-                ax.plot(model_handler.test_data['date'], y_pred, label=f"{ticker} - {model} (Predicted)")
-                ax.plot(model_handler.test_data['date'], model_handler.Y_test, label=f"{ticker} - {model} (Actual)", linestyle='dashed')
+                y_pred = model_handler.model.predict(ML_data['x_test'])
+                # y_pred = model_handler.model.predict(model_handler.X_test)
+                ax.plot(ML_data['x_test'].index, y_pred, label=f"{ticker} - {model} (Predicted)")
+                ax.plot(ML_data['x_test'].index, ML_data['y_test'], label=f"{ticker} - {model} (Actual)", linestyle='dashed')
 
             except Exception as e:
                 results.append({'ticker': ticker, 'model': model, 'error': str(e)})

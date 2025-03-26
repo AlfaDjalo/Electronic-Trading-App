@@ -16,19 +16,22 @@ from keras.regularizers import l1, l2
 from keras.callbacks import EarlyStopping
 
 class ModelHandler:
-    def __init__(self, df, train_date='2022-12-31'):
-        self.df = df
-        self.train_date = train_date
-        self.train_data = None
-        self.test_data = None
-        self.split_data()
-        self.X_train = None
-        self.Y_train = None
-        self.X_test = None
-        self.Y_test = None
-        self.features = []
-        self.target = [] 
-        self.model = None
+    def __init__(self, data, params):
+    # def __init__(self, df, train_date='2022-12-31'):
+        self.data = data
+        self.params = params
+        # self.df = df
+        # self.train_date = train_date
+        # self.train_data = None
+        # self.test_data = None
+        # self.split_data()
+        # self.X_train = None
+        # self.Y_train = None
+        # self.X_test = None
+        # self.Y_test = None
+        # self.features = []
+        # self.target = [] 
+        # self.model = None
 
     def split_data(self):
         """Split the data into training and testing sets based on the train_date."""
@@ -111,17 +114,37 @@ class ModelHandler:
 
     def regression(self):
         """Perform simple regression."""
-        self.create_lagged_features(2)
-        print(self.df.columns)
+        # self.create_lagged_features(2)
+        # print(self.df.columns)
 
-        self.features = ['min_1_close', 'min_2_close']
-        self.target = ['close']
-        self.prepare_features()
+        # self.features = ['min_1_close', 'min_2_close']
+        # self.target = ['close']
+        # self.prepare_features()
+
+        # print('x_train')
+        # print(self.data['x_train'])
+
+        # print('y_train')
+        # print(self.data['y_train'])
 
         self.model = LinearRegression(fit_intercept=True)
-        self.model.fit(self.X_train, self.Y_train)
+        self.model.fit(self.data['x_train'], self.data['y_train'])
         
         return
+
+    # def regression(self):
+    #     """Perform simple regression."""
+    #     self.create_lagged_features(2)
+    #     print(self.df.columns)
+
+    #     self.features = ['min_1_close', 'min_2_close']
+    #     self.target = ['close']
+    #     self.prepare_features()
+
+    #     self.model = LinearRegression(fit_intercept=True)
+    #     self.model.fit(self.X_train, self.Y_train)
+        
+    #     return
 
     def regression_on_trend(self):
         """Perform regression on trend."""
@@ -193,24 +216,22 @@ class ModelHandler:
 
         return
 
-
     def get_stats(self):
         """Calculate stats for the current model."""
-        y_pred = self.model.predict(self.X_test)
+        y_pred = self.model.predict(self.data['x_test'])
+        # y_pred = self.model.predict(self.X_test)
 
         stats = {
-            'RMSE': f"{np.sqrt(mean_squared_error(self.Y_test, y_pred)):.3f}",
-            'Variance': f"{r2_score(self.Y_test, y_pred):.3f}"
+            'RMSE': f"{np.sqrt(mean_squared_error(self.data['y_test'], y_pred)):.3f}",
+            'Variance': f"{r2_score(self.data['y_test'], y_pred):.3f}"
+            # 'RMSE': f"{np.sqrt(mean_squared_error(self.Y_test, y_pred)):.3f}",
+            # 'Variance': f"{r2_score(self.Y_test, y_pred):.3f}"
         }
-
         return stats
 
     def get_plt(self):
         """Create a plot for the current model."""
         y_pred = self.model.predict(self.X_test) 
-        
-        # print(self.X_test)
-        # print(y_pred)
 
         plt.scatter(self.Y_test, y_pred)
         plt.plot([self.Y_test.min(), self.Y_test.max()], [self.Y_test.min(), self.Y_test.max()], 'r--', label='Perfect Fit')
@@ -220,27 +241,8 @@ class ModelHandler:
 
         return plt
 
-    # def get_fig(self):
-    #     """Create a plot for the current model."""
-    #     fig, ax = plt.subplots()
-    #     y_pred = self.model.predict(self.X_test) 
-        
-    #     ax.scatter(self.Y_test, y_pred)
-    #     ax.plot([self.Y_test.min(), self.Y_test.max()], [self.Y_test.min(), self.Y_test.max()], 'r--', label='Perfect Fit')
-    #     ax.set_xlabel('Actual')
-    #     ax.set_ylabel('Predicted')
-    #     ax.legend()
-
-    #     return fig
-
-
     def prediction(self, input_data):
         
         y_pred = self.model.predict(input_data)
 
         return
-
-
-
-
-
