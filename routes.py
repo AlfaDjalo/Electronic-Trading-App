@@ -28,15 +28,29 @@ def setup_routes(app):
             session['comparisons'] = []
             print(session.get('comparisons', []))
 
-        asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
-        tickers = asx200[['Code', 'Company']].to_dict(orient="records")
+        category = request.args.get('category', 'australian')  # Default to Australian stocks
+        tickers = []
+
+        if category == 'australian':
+            asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
+            tickers = asx200[['Code', 'Company']].to_dict(orient="records")
+        elif category == 'us':
+            sp500 = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
+            sp500['Symbol'] = sp500['Symbol'].str.replace('.', '-')
+            # symbols_list = sp500['Symbol'].unique().tolist()
+            tickers = sp500[['Symbol', 'Security']].rename(columns={'Symbol': 'Code', 'Security': 'Company'}).to_dict(orient="records")
+        elif category == 'fx':
+            tickers = [{'Code': 'AUDUSD=X', 'Company': 'AUDUSD'}]
+        elif category == 'crypto':
+            tickers = [{'Code': 'BTC-USD', 'Company': 'Bitcoin'}]
+
         comparisons = session.get('comparisons', [])  # Retrieve the list of comparisons
-        return render_template("index.html", tickers=tickers, comparisons=comparisons)
+        return render_template("index.html", tickers=tickers, comparisons=comparisons, category=category)
 
     @app.route('/load_data', methods=['POST'])
     def load_data():
         selected_ticker = request.form.get('ticker')
-        selected_ticker +=  '.AX'
+        selected_ticker +=  '.banana'
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
 
@@ -60,6 +74,7 @@ def setup_routes(app):
 
     @app.route('/run_algorithm', methods=['POST'])
     def run_algorithm():
+        print("In run_algorithm")
         selected_ticker = session.get('selected_ticker')
         start_date = session.get('start_date')
         end_date = session.get('end_date')
@@ -100,7 +115,11 @@ def setup_routes(app):
 
     @app.route('/create_comparison', methods=['POST'])
     def create_comparison():
-        ticker = request.form.get('ticker') + '.AX'
+        category = request.form.get('category', 'default')  # Default to Australian stocks
+        print("Category", category)
+        ticker = request.form.get('ticker')
+        if category == 'australian':
+            ticker += '.AX'
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
         model = request.form.get('model')
@@ -185,6 +204,7 @@ def setup_routes(app):
 
     @app.route('/edit_comparison/<int:index>', methods=['GET', 'POST'])
     def edit_comparison(index):
+        print("In edit comparison")
         comparisons = session.get('comparisons', [])
         if index >= len(comparisons):
             return "Comparison not found", 404
@@ -225,7 +245,9 @@ def setup_routes(app):
             start_date = comparison['start_date']
             end_date = comparison['end_date']
             model = comparison['model']
-            parameters = comparison.get('parameters', {})  # Retrieve parameters if available
+            params = comparison.get('params', {})  # Retrieve parameters if available
+            # print("Parameters in routes")
+            # print(params)
 
             stock_data = StockData(ticker, start_date, end_date, load_data=True, create_model_data=True)
             features = stock_data.create_feature_list(comparison)
@@ -237,7 +259,7 @@ def setup_routes(app):
             # model_handler = ModelHandler(stock_data.get_data(), train_date='2022-12-31')
             stock_data.split_data()
             ML_data = stock_data.get_data2()
-            model_handler = ModelHandler(ML_data, parameters)
+            model_handler = ModelHandler(ML_data, params)
             # print("x_train") 
             # print(ML_data['x_train'])
     
@@ -246,8 +268,10 @@ def setup_routes(app):
                     # num_days_lag = int(parameters.get('num_days_lag', 3))
                     # model_handler.create_lagged_features(num_days_lag)
                     model_handler.regression()
-                elif model in ['LSTM', 'RNN']:
-                    model_handler.ml_regression(model_type=model.lower(), do_training=True, parameters=parameters)
+                elif model == 'RNN':
+                    model_handler.ML(model_handler.simpleRNN_)
+                elif model == 'LSTM':
+                    model_handler.ML(model_handler.lstm_)
                 else:
                     results.append({'ticker': ticker, 'model': model, 'error': 'Model not implemented'})
                     continue
