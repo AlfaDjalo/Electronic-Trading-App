@@ -17,21 +17,9 @@ from keras.callbacks import EarlyStopping
 
 class ModelHandler:
     def __init__(self, data, params):
-    # def __init__(self, df, train_date='2022-12-31'):
         self.data = data
         self.params = params
-        # self.df = df
-        # self.train_date = train_date
-        # self.train_data = None
-        # self.test_data = None
-        # self.split_data()
-        # self.X_train = None
-        # self.Y_train = None
-        # self.X_test = None
-        # self.Y_test = None
-        # self.features = []
-        # self.target = [] 
-        # self.model = None
+
 
     def split_data(self):
         """Split the data into training and testing sets based on the train_date."""

@@ -20,9 +20,12 @@ def clear_comparisons_on_start():
 @app.context_processor
 def inject_navigation():
     return dict(navigation=[
-        {'name': 'Home', 'url': url_for('index')},
-        {'name': 'Select Algorithm', 'url': url_for('select_algorithm')}
+        {'name': 'Home', 'url': url_for('index')}
     ])
+    # return dict(navigation=[
+    #     {'name': 'Home', 'url': url_for('index')},
+    #     {'name': 'Select Algorithm', 'url': url_for('select_algorithm')}
+    # ])
 
 if __name__ == "__main__":
     app.run(debug=True)
