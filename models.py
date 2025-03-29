@@ -354,24 +354,37 @@ class ModelHandler:
         l1_reg = self.params.get('l1_reg', {}).get('value', 0.0)
         seed = self.params.get('seed', {}).get('value', 0)
         activation = self.params.get('activation', {}).get('value', 'tanh')
-
-        model = Sequential()
-        model.add(LSTM(
-            num_units,
-            activation=activation,
-            kernel_initializer=keras.initializers.glorot_uniform(seed),
-            bias_initializer=keras.initializers.glorot_uniform(seed),
-            recurrent_initializer=keras.initializers.orthogonal(seed),
-            kernel_regularizer=l1(l1_reg),
-            input_shape=(self.data['x_train'].shape[1], 1),
-            unroll=True
-        ))
-        model.add(Dense(
-            1,
-            kernel_initializer=keras.initializers.glorot_uniform(seed),
-            bias_initializer=keras.initializers.glorot_uniform(seed),
-            kernel_regularizer=l1(l1_reg)
-        ))
+        
+        print("num_units:", type(num_units), num_units)
+        print("l1_reg:", type(l1_reg), l1_reg)
+        print("seed:", type(seed), seed)
+        print("activation:", type(activation), activation)
+        
+        print("In model, parameters loaded")
+        try:
+            model = Sequential()
+            print("First add")
+            model.add(LSTM(
+                num_units,
+                activation=activation,
+                kernel_initializer=keras.initializers.glorot_uniform(seed),
+                bias_initializer=keras.initializers.glorot_uniform(seed),
+                recurrent_initializer=keras.initializers.orthogonal(seed),
+                kernel_regularizer=l1(l1_reg),
+                input_shape=(self.data['x_train'].shape[1], 1),
+                unroll=True
+            ))
+            print("Second add")
+            model.add(Dense(
+                1,
+                kernel_initializer=keras.initializers.glorot_uniform(seed),
+                bias_initializer=keras.initializers.glorot_uniform(seed),
+                kernel_regularizer=l1(l1_reg)
+            ))
+        except Exception as e:
+            print(f"Error during model.fit: {str(e)}")
+            raise  # Re-raise the exception after logging it
+        print("In model, compiling model")
         model.compile(loss='mean_squared_error', optimizer='adam')
         return model
 
@@ -379,12 +392,22 @@ class ModelHandler:
         """Train the model using the provided model function."""
         epochs = self.params.get('epochs', {}).get('value', 201)
         batch_size = self.params.get('batch_size', {}).get('value', 1000)
+        print("In model, parameters loaded")
 
         x_train = self.data['x_train'].values.reshape(self.data['x_train'].shape[0], self.data['x_train'].shape[1], 1)
         es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
+        print("In model, data transformed")
 
         self.model = model_function()
-        self.model.fit(x_train, self.data['y_train'], epochs=epochs, batch_size=batch_size, callbacks=[es], shuffle=False)
+        print("In model, model_function specified")
+
+        try:
+            self.model.fit(x_train, self.data['y_train'], epochs=epochs, batch_size=batch_size, callbacks=[es], shuffle=False)
+        except Exception as e:
+            print(f"Error during model.add: {str(e)}")
+            raise  # Re-raise the exception after logging it
+        print("In model, model fit")
+
         return
 
 

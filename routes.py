@@ -36,6 +36,7 @@ def create_prediction_chart(x_test_index, y_test, predictions):
 
 def create_error_chart(x_test_index, errors):
     """Generate a chart showing the error series for all models."""
+    print(errors)
     fig, ax = plt.subplots(figsize=(15, 8))
     for model_name, error in errors.items():
         ax.plot(x_test_index, error, label=f"Error ({model_name})")
@@ -127,20 +128,28 @@ def setup_routes(app):
         if request.method == 'POST':
             parameters = request.form.to_dict()
             model_metadata = comparisons[index]['params']
-
+            print("Getting parameters")
             # Validate inputs and update the value field
             for param, value in parameters.items():
                 metadata = model_metadata.get(param, {})
                 if not isinstance(metadata, dict):
                     return f"Invalid metadata for parameter '{param}'", 400
-                if metadata.get("type") == "number":
+                if metadata.get("type") == "integer":
+                    value = int(value)
+                    if value < metadata.get("min", float('-inf')) or value > metadata.get("max", float('inf')):
+                        return f"Invalid value for {param}", 400
+                elif metadata.get("type") == "float":
                     value = float(value)
                     if value < metadata.get("min", float('-inf')) or value > metadata.get("max", float('inf')):
                         return f"Invalid value for {param}", 400
                 elif metadata.get("type") == "category":
                     if value not in metadata.get("values", []):
                         return f"Invalid value for {param}", 400
-
+                elif metadata.get("type") == "boolean":
+                    try:
+                        value = bool(int(value)) if value else False  # Convert '0' or '1' to False or True
+                    except ValueError:
+                        return f"Invalid value for {param}: must be '0' or '1'", 400
                 # Save validated value back to the metadata dictionary
                 metadata['value'] = value
 
@@ -182,7 +191,7 @@ def setup_routes(app):
 
         return render_template('edit_comparison.html', comparison=comparisons[index])
 
-    @app.route('/delete_comparison/<int:index>', methods=['POST'])
+    @app.route('/delete_comparison/<int:index>', methods=['POST', 'GET'])
     def delete_comparison(index):
         comparisons = session.get('comparisons', [])
         if index >= len(comparisons):
@@ -238,11 +247,12 @@ def setup_routes(app):
             end_date = comparison['end_date']
             model = comparison['model']
             params = comparison.get('params', {})
-
             stock_data = StockData(ticker, start_date, end_date, load_data=True, create_model_data=True)
             features = stock_data.create_feature_list(comparison)
             target = stock_data.create_target(comparison)
             stock_data.split_data()
+            if params.get('standardise', {}).get('value', False):
+                stock_data.standardise_input(stock_data.features)
             ML_data = stock_data.get_data2()
             model_handler = ModelHandler(ML_data, params)
 
@@ -259,8 +269,10 @@ def setup_routes(app):
                     y_test = ML_data['y_test']
                     x_test_index = ML_data['x_test'].index
 
-                predictions[model] = y_pred
-                errors[model] = y_test - y_pred if y_test is not None and y_pred is not None else None
+                print("Adding prediction for ", model)
+                predictions[model] = y_pred  # Ensure predictions are flattened
+                print("Adding error for ", model)
+                errors[model] = (y_test - y_pred) if y_test is not None else None
 
                 results.append({
                     'ticker': ticker,
@@ -311,6 +323,7 @@ def setup_routes(app):
         features = stock_data.create_feature_list(comparison)
         target = stock_data.create_target(comparison)
         stock_data.split_data()
+        stock_data.standardise_input(stock_data.features)
         ML_data = stock_data.get_data2()
         model_handler = ModelHandler(ML_data, params)
 
@@ -375,6 +388,10 @@ def setup_routes(app):
                     target = stock_data.create_target(comparison)
                     stock_data.split_data()
                     ML_data = stock_data.get_data2()
+                    print(ML_data['x_test'])
+                    stock_data.standardise_input(stock_data.features)
+                    ML_data = stock_data.get_data2()
+                    print(ML_data['x_test'])
                     model_handler = ModelHandler(ML_data, params)
 
                     try:
