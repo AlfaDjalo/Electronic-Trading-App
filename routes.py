@@ -109,7 +109,8 @@ def setup_routes(app):
             'model': model,
             'start_date': start_date,
             'end_date': end_date,
-            'params': model_parameters  # Include full parameter metadata with initialized values
+            'params': model_parameters,  # Include full parameter metadata with initialized values
+            'use_log_returns': False  # Default to off
         }
 
         # Retrieve the list of comparisons from the session
@@ -153,6 +154,9 @@ def setup_routes(app):
                 # Save validated value back to the metadata dictionary
                 metadata['value'] = value
 
+            use_log_returns = request.form.get('use_log_returns', 'off') == 'on'
+            comparisons[index]['use_log_returns'] = use_log_returns
+
             # Save updated parameters to the comparison and session
             comparisons[index]['params'] = model_metadata
             session['comparisons'] = comparisons
@@ -171,7 +175,8 @@ def setup_routes(app):
             'set_parameters.html',
             model=model,
             model_parameters=model_parameters,
-            comparison=comparisons[index]
+            comparison=comparisons[index],
+            use_log_returns=comparisons[index].get('use_log_returns', False)
         )
 
     @app.route('/edit_comparison/<int:index>', methods=['GET', 'POST'])
