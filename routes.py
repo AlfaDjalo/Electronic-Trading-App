@@ -1,10 +1,8 @@
-""" Manage routes """
+"""Manage routes for the Electronic Trading App."""
 
-# import io
+# Import necessary libraries
 import base64
 import json
-# import os
-
 from flask import render_template, request, redirect, url_for, session, jsonify
 import pandas as pd
 import numpy as np
@@ -17,7 +15,17 @@ from models import ModelHandler
 from stock_data import StockData
 
 def create_prediction_chart(x_test_index, y_test, predictions):
-    """Generate a chart comparing actual values and multiple predicted series."""
+    """
+    Generate a chart comparing actual values and multiple predicted series.
+
+    Args:
+        x_test_index (pd.Index): Index of the test dataset.
+        y_test (np.ndarray): Actual values of the test dataset.
+        predictions (dict): Dictionary of predicted values from different models.
+
+    Returns:
+        str: Base64-encoded URL of the generated chart.
+    """
     fig, ax = plt.subplots(figsize=(15, 8))
     ax.plot(x_test_index, y_test, label="Actual", linestyle='dashed')
     for model_name, y_pred in predictions.items():
@@ -35,7 +43,16 @@ def create_prediction_chart(x_test_index, y_test, predictions):
     return chart_url
 
 def create_error_chart(x_test_index, errors):
-    """Generate a chart showing the error series for all models."""
+    """
+    Generate a chart showing the error series for all models.
+
+    Args:
+        x_test_index (pd.Index): Index of the test dataset.
+        errors (dict): Dictionary of error values for different models.
+
+    Returns:
+        str: Base64-encoded URL of the generated error chart.
+    """
     print(errors)
     fig, ax = plt.subplots(figsize=(15, 8))
     for model_name, error in errors.items():
@@ -53,11 +70,23 @@ def create_error_chart(x_test_index, errors):
     return error_chart_url
 
 def setup_routes(app):
-    """ Setup routes """
+    """
+    Set up all routes for the Flask application.
+
+    Args:
+        app (Flask): The Flask application instance.
+    """
     app.secret_key = 'your_secret_key'  # Add a secret key for session management
+    comparison_counter = 1  # Initialize a counter for generating unique names
 
     @app.route("/")
     def index():
+        """
+        Render the home page with a list of tickers and comparisons.
+
+        Returns:
+            str: Rendered HTML template for the home page.
+        """
         # Initialize the session variable as a list if it doesn't exist
         if 'comparisons' not in session:
             print("Adding comparisons list to session")
@@ -73,7 +102,6 @@ def setup_routes(app):
         elif category == 'us':
             sp500 = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
             sp500['Symbol'] = sp500['Symbol'].str.replace('.', '-')
-            # symbols_list = sp500['Symbol'].unique().tolist()
             tickers = sp500[['Symbol', 'Security']].rename(columns={'Symbol': 'Code', 'Security': 'Company'}).to_dict(orient="records")
         elif category == 'fx':
             tickers = [{'Code': 'AUDUSD=X', 'Company': 'AUDUSD'}]
@@ -85,6 +113,13 @@ def setup_routes(app):
 
     @app.route('/create_comparison', methods=['POST'])
     def create_comparison():
+        """
+        Create a new comparison and add it to the session.
+
+        Returns:
+            Response: Redirect to the home page.
+        """
+        nonlocal comparison_counter  # Use the counter to generate unique names
         category = request.form.get('category', 'default')  # Default to Australian stocks
         print("Category", category)
         ticker = request.form.get('ticker')
@@ -103,8 +138,17 @@ def setup_routes(app):
         for param, metadata in model_parameters.items():
             metadata['value'] = metadata.get('default')
 
+        # Retrieve the list of comparisons from the session
+        comparisons = session.get('comparisons', [])
+
+        # Ensure the comparison name is unique
+        existing_names = {c['name'] for c in comparisons}
+        while f"Comparison_{comparison_counter}" in existing_names:
+            comparison_counter += 1
+
         # Create a new comparison dictionary
         comparison = {
+            'name': f"Comparison_{comparison_counter}",  # Generate unique name
             'ticker': ticker,
             'model': model,
             'start_date': start_date,
@@ -112,9 +156,8 @@ def setup_routes(app):
             'params': model_parameters,  # Include full parameter metadata with initialized values
             'use_log_returns': False  # Default to off
         }
+        comparison_counter += 1  # Increment the counter
 
-        # Retrieve the list of comparisons from the session
-        comparisons = session.get('comparisons', [])
         comparisons.append(comparison)  # Add the dictionary directly
         session['comparisons'] = comparisons  # Save the updated list back to the session
 
@@ -122,6 +165,15 @@ def setup_routes(app):
 
     @app.route('/set_parameters/<int:index>', methods=['GET', 'POST'])
     def set_parameters(index):
+        """
+        Set or update parameters for a specific comparison.
+
+        Args:
+            index (int): Index of the comparison to update.
+
+        Returns:
+            Response: Rendered HTML template or redirect to the home page.
+        """
         comparisons = session.get('comparisons', [])
         if index >= len(comparisons):
             return "Comparison not found", 404
@@ -181,23 +233,52 @@ def setup_routes(app):
 
     @app.route('/edit_comparison/<int:index>', methods=['GET', 'POST'])
     def edit_comparison(index):
-        print("In edit comparison")
+        """
+        Edit the details of an existing comparison.
+
+        Args:
+            index (int): Index of the comparison to edit.
+
+        Returns:
+            Response: Rendered HTML template or redirect to the home page.
+        """
         comparisons = session.get('comparisons', [])
         if index >= len(comparisons):
             return "Comparison not found", 404
 
         if request.method == 'POST':
-            comparisons[index]['ticker'] = request.form.get('ticker') + '.AX' # Needs fixing
+            new_name = request.form.get('name')
+            existing_names = {c['name'] for i, c in enumerate(comparisons) if i != index}
+
+            if new_name in existing_names:
+                error_message = f"A comparison with the name '{new_name}' already exists."
+                return render_template(
+                    'edit_comparison.html',
+                    comparison=comparisons[index],
+                    error_message=error_message
+                )
+
+            comparisons[index]['name'] = new_name  # Update the name
+            comparisons[index]['ticker'] = request.form.get('ticker') + '.AX'  # Needs fixing
             comparisons[index]['start_date'] = request.form.get('start_date')
             comparisons[index]['end_date'] = request.form.get('end_date')
             comparisons[index]['model'] = request.form.get('model')
             session['comparisons'] = comparisons
             return redirect(url_for('index'))
 
-        return render_template('edit_comparison.html', comparison=comparisons[index])
+        return render_template('edit_comparison.html', comparison=comparisons[index], error_message=None)
 
     @app.route('/delete_comparison/<int:index>', methods=['POST', 'GET'])
     def delete_comparison(index):
+        """
+        Delete a comparison from the session.
+
+        Args:
+            index (int): Index of the comparison to delete.
+
+        Returns:
+            Response: Redirect to the home page.
+        """
         comparisons = session.get('comparisons', [])
         if index >= len(comparisons):
             return "Comparison not found", 404
@@ -208,11 +289,23 @@ def setup_routes(app):
 
     @app.route('/clear_comparisons', methods=['POST'])
     def clear_comparisons():
+        """
+        Clear all comparisons from the session.
+
+        Returns:
+            Response: Redirect to the home page.
+        """
         session['comparisons'] = []
         return redirect(url_for('index'))
 
     @app.route('/run_comparisons', methods=['GET', 'POST'])
     def run_comparisons():
+        """
+        Run all comparisons and generate results.
+
+        Returns:
+            Response: Rendered HTML template with comparison results.
+        """
         comparisons = session.get('comparisons', [])
         if not comparisons:
             return render_template('comparison_results.html', results=[], unique_tickers=[], selected_ticker=None)
@@ -230,6 +323,7 @@ def setup_routes(app):
         if request.method == 'GET':
             for comparison in filtered_comparisons:
                 results.append({
+                    'name': comparison['name'],  # Use the comparison name
                     'ticker': comparison['ticker'],
                     'model': comparison['model'],
                     'stats': 'N/A',
@@ -274,12 +368,12 @@ def setup_routes(app):
                     y_test = ML_data['y_test']
                     x_test_index = ML_data['x_test'].index
 
-                print("Adding prediction for ", model)
-                predictions[model] = y_pred  # Ensure predictions are flattened
-                print("Adding error for ", model)
-                errors[model] = (y_test - y_pred) if y_test is not None else None
+                # Use the comparison name as the key for predictions and errors
+                predictions[comparison['name']] = y_pred
+                errors[comparison['name']] = (y_test - y_pred) if y_test is not None else None
 
                 results.append({
+                    'name': comparison['name'],  # Use the comparison name
                     'ticker': ticker,
                     'model': model,
                     'stats': model_handler.get_stats(),
@@ -287,6 +381,7 @@ def setup_routes(app):
                 })
             except Exception as e:
                 results.append({
+                    'name': comparison['name'],  # Use the comparison name
                     'ticker': ticker,
                     'model': model,
                     'stats': 'N/A',
@@ -313,6 +408,15 @@ def setup_routes(app):
 
     @app.route('/detailed_results/<int:index>')
     def detailed_results(index):
+        """
+        Display detailed results for a specific comparison.
+
+        Args:
+            index (int): Index of the comparison to display.
+
+        Returns:
+            Response: Rendered HTML template with detailed results.
+        """
         comparisons = session.get('comparisons', [])
         if index >= len(comparisons):
             return "Comparison not found", 404
@@ -356,6 +460,12 @@ def setup_routes(app):
 
     @app.route('/comparison_results', methods=['GET'])
     def comparison_results():
+        """
+        Display a summary of all comparisons.
+
+        Returns:
+            Response: Rendered HTML template with comparison results.
+        """
         comparisons = session.get('comparisons', [])
         results = []
 
@@ -365,6 +475,7 @@ def setup_routes(app):
 
         for comparison in filtered_comparisons:
             results.append({
+                'name': comparison['name'],  # Use the comparison name
                 'ticker': comparison['ticker'],
                 'model': comparison['model'],
                 'stats': 'N/A',  # Placeholder for stats
@@ -438,6 +549,12 @@ def setup_routes(app):
 
     @app.context_processor
     def inject_navigation():
+        """
+        Inject navigation links into all templates.
+
+        Returns:
+            dict: Dictionary of navigation links.
+        """
         return dict(navigation=[
             {'name': 'Home', 'url': url_for('index')}
         ])
