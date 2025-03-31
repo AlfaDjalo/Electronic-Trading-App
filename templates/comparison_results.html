@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Comparison Results{% endblock %}
+
+{% block content %}
+<h3>Comparison Results</h3>
+
+<form method="get" action="{{ url_for('run_comparisons') }}">
+    <div class="form-group">
+        <label for="ticker_filter">Filter by Ticker</label>
+        <select class="form-control" id="ticker_filter" name="ticker" onchange="this.form.submit()">
+            {% for ticker in unique_tickers %}
+                <option value="{{ ticker }}" {% if ticker == selected_ticker %}selected{% endif %}>{{ ticker }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Ticker</th>
+            <th>Model</th>
+            <th>Stats</th>
+            <th>Error</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for result in results %}
+        <tr>
+            <td>{{ result.name }}</td>
+            <td>{{ result.ticker }}</td>
+            <td>{{ result.model }}</td>
+            <td>{{ result.stats }}</td>
+            <td>{{ result.error }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if prediction_chart_url %}
+<hr>
+<h4>Prediction Chart</h4>
+<img src="data:image/png;base64,{{ prediction_chart_url }}" alt="Prediction Chart" class="img-fluid">
+{% endif %}
+
+{% if error_chart_url %}
+<hr>
+<h4>Error Chart (All Models)</h4>
+<img src="data:image/png;base64,{{ error_chart_url }}" alt="Error Chart" class="img-fluid">
+{% endif %}
+
+<a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
+{% endblock %}

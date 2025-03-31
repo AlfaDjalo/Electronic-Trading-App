@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Set Parameters{% endblock %}
+
+{% block content %}
+<h3>Set Parameters for {{ model }}</h3>
+
+<div>
+    <p><strong>Ticker:</strong> {{ comparison.ticker }}</p>
+    <p><strong>Start Date:</strong> {{ comparison.start_date }}</p>
+    <p><strong>End Date:</strong> {{ comparison.end_date }}</p>
+</div>
+
+<form method="post">
+    <h4>Model-Specific Parameters</h4>
+    {% for param, metadata in model_parameters.items() %}
+    <div class="form-group">
+        <label for="{{ param }}">{{ param }}</label>
+        {% if metadata.type == "boolean" %}
+        <input type="checkbox" id="{{ param }}" name="{{ param }}" value="1" 
+               {% if metadata.value %}checked{% endif %}>
+        {% elif metadata.type == "number" %}
+        <input type="number" class="form-control" id="{{ param }}" name="{{ param }}" 
+               value="{{ metadata.value }}" 
+               min="{{ metadata.min }}" max="{{ metadata.max }}">
+        {% elif metadata.type == "category" %}
+        <select class="form-control" id="{{ param }}" name="{{ param }}">
+            {% for option in metadata.values() %}
+            <option value="{{ option }}" 
+                    {% if option == metadata.value %}selected{% endif %}>
+                {{ option }}
+            </option>
+            {% endfor %}
+        </select>
+        {% else %}
+        <input type="text" class="form-control" id="{{ param }}" name="{{ param }}" 
+               value="{{ metadata.value }}">
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="form-group">
+        <label for="use_log_returns">Use Log Returns</label>
+        <input type="checkbox" id="use_log_returns" name="use_log_returns" {% if use_log_returns %}checked{% endif %}>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Parameters</button>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

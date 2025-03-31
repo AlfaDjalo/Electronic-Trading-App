@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Detailed Results{% endblock %}
+
+{% block content %}
+<h3>Detailed Results for {{ comparison.ticker }} - {{ comparison.model }}</h3>
+
+<h4>Prediction vs Actual Chart</h4>
+{% if prediction_chart_url %}
+    <img src="data:image/png;base64,{{ prediction_chart_url }}" alt="Prediction Chart" class="img-fluid">
+{% else %}
+    <p>No prediction chart available.</p>
+{% endif %}
+
+<h4>Error Chart</h4>
+{% if error_chart_url %}
+    <img src="data:image/png;base64,{{ error_chart_url }}" alt="Error Chart" class="img-fluid">
+{% else %}
+    <p>No error chart available.</p>
+{% endif %}
+
+<a href="{{ url_for('comparison_results') }}" class="btn btn-primary">Back to Comparison Results</a>
+{% endblock %}
