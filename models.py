@@ -15,6 +15,9 @@ from keras.layers import Dense, Layer, LSTM, GRU, SimpleRNN, RNN
 from keras.regularizers import l1, l2
 from keras.callbacks import EarlyStopping
 
+from alphaRNN import AlphaRNN
+from alphatRNN import AlphatRNN  # Import AlphaRNN and AlphatRNN modules
+
 class ModelHandler:
     def __init__(self, data, params):
         self.data = data
@@ -354,6 +357,8 @@ class ModelHandler:
         l1_reg = self.params.get('l1_reg', {}).get('value', 0.0)
         seed = self.params.get('seed', {}).get('value', 0)
         activation = self.params.get('activation', {}).get('value', 'tanh')
+        loss = self.params.get('loss', {}).get('value', 'mean_squared_error')
+        optimizer = self.params.get('optimizer', {}).get('value', 'adam')
         
         print("num_units:", type(num_units), num_units)
         print("l1_reg:", type(l1_reg), l1_reg)
@@ -385,6 +390,88 @@ class ModelHandler:
             print(f"Error during model.fit: {str(e)}")
             raise  # Re-raise the exception after logging it
         print("In model, compiling model")
+        model.compile(loss=loss, optimizer=optimizer)
+        return model
+
+    def gru_(self):
+        """Define and return a GRU model."""
+        num_units = self.params.get('num_units', {}).get('value', 10)
+        l1_reg = self.params.get('l1_reg', {}).get('value', 0.0)
+        seed = self.params.get('seed', {}).get('value', 0)
+        activation = self.params.get('activation', {}).get('value', 'tanh')
+
+        model = Sequential()
+        model.add(GRU(
+            num_units,
+            activation=activation,
+            kernel_initializer=keras.initializers.glorot_uniform(seed),
+            bias_initializer=keras.initializers.glorot_uniform(seed),
+            recurrent_initializer=keras.initializers.orthogonal(seed),
+            kernel_regularizer=l1(l1_reg),
+            input_shape=(self.data['x_train'].shape[1], 1),
+            unroll=True
+        ))
+        model.add(Dense(
+            1,
+            kernel_initializer=keras.initializers.glorot_uniform(seed),
+            bias_initializer=keras.initializers.glorot_uniform(seed),
+            kernel_regularizer=l1(l1_reg)
+        ))
+        model.compile(loss='mean_squared_error', optimizer='adam')
+        return model
+
+    def alpharnn_(self):
+        """Define and return an AlphaRNN model."""
+        num_units = self.params.get('num_units', {}).get('value', 10)
+        l1_reg = self.params.get('l1_reg', {}).get('value', 0.0)
+        seed = self.params.get('seed', {}).get('value', 0)
+        activation = self.params.get('activation', {}).get('value', 'tanh')
+
+        model = Sequential()
+        model.add(AlphaRNN(
+            num_units,
+            activation=activation,
+            kernel_initializer=keras.initializers.glorot_uniform(seed),
+            bias_initializer=keras.initializers.glorot_uniform(seed),
+            recurrent_initializer=keras.initializers.orthogonal(seed),
+            kernel_regularizer=l1(l1_reg),
+            input_shape=(self.data['x_train'].shape[1], 1),
+            unroll=True
+        ))
+        model.add(Dense(
+            1,
+            kernel_initializer=keras.initializers.glorot_uniform(seed),
+            bias_initializer=keras.initializers.glorot_uniform(seed),
+            kernel_regularizer=l1(l1_reg)
+        ))
+        model.compile(loss='mean_squared_error', optimizer='adam')
+        return model
+
+    def alphatrnn_(self):
+        """Define and return an AlphatRNN model."""
+        num_units = self.params.get('num_units', {}).get('value', 10)
+        l1_reg = self.params.get('l1_reg', {}).get('value', 0.0)
+        seed = self.params.get('seed', {}).get('value', 0)
+        activation = self.params.get('activation', {}).get('value', 'tanh')
+
+        model = Sequential()
+        model.add(AlphatRNN(
+            num_units,
+            activation=activation,
+            recurrent_activation='sigmoid',
+            kernel_initializer=keras.initializers.glorot_uniform(seed),
+            bias_initializer=keras.initializers.glorot_uniform(seed),
+            recurrent_initializer=keras.initializers.orthogonal(seed),
+            kernel_regularizer=l1(l1_reg),
+            input_shape=(self.data['x_train'].shape[1], 1),
+            unroll=True
+        ))
+        model.add(Dense(
+            1,
+            kernel_initializer=keras.initializers.glorot_uniform(seed),
+            bias_initializer=keras.initializers.glorot_uniform(seed),
+            kernel_regularizer=l1(l1_reg)
+        ))
         model.compile(loss='mean_squared_error', optimizer='adam')
         return model
 
@@ -410,4 +497,51 @@ class ModelHandler:
 
         return
 
+    # def AlphatRNN_(self):
+    #     model = Sequential()
+    #     model.add(AlphatRNN(n_units, activation='tanh', recurrent_activation='sigmoid', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(x_train.shape[1], x_train.shape[-1]), unroll=True))  
+    #     model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
+    #     model.compile(loss='mean_squared_error', optimizer='adam')
+    #     return model
 
+    # def AlphaRNN_(self):
+    #     model = Sequential()
+    #     model.add(AlphaRNN(
+    #         n_units,
+    #         activation='tanh',
+    #         kernel_initializer=keras.initializers.glorot_uniform(seed),
+    #         bias_initializer=keras.initializers.glorot_uniform(seed),
+    #         recurrent_initializer=keras.initializers.orthogonal(seed),
+    #         kernel_regularizer=l1(l1_reg),
+    #         input_shape=(self.data['x_train'].shape[1], self.data['x_train'].shape[-1]),
+    #         unroll=True
+    #     ))
+    #     model.add(Dense(
+    #         1,
+    #         kernel_initializer=keras.initializers.glorot_uniform(seed),
+    #         bias_initializer=keras.initializers.glorot_uniform(seed),
+    #         kernel_regularizer=l1(l1_reg)
+    #     ))
+    #     model.compile(loss='mean_squared_error', optimizer='adam')
+    #     return model
+
+    # def GRU_(self):
+    #     model = Sequential()
+    #     model.add(GRU(
+    #         n_units,
+    #         activation='tanh',
+    #         kernel_initializer=keras.initializers.glorot_uniform(seed),
+    #         bias_initializer=keras.initializers.glorot_uniform(seed),
+    #         recurrent_initializer=keras.initializers.orthogonal(seed),
+    #         kernel_regularizer=l1(l1_reg),
+    #         input_shape=(self.data['x_train'].shape[1], self.data['x_train'].shape[-1]),
+    #         unroll=True
+    #     ))
+    #     model.add(Dense(
+    #         1,
+    #         kernel_initializer=keras.initializers.glorot_uniform(seed),
+    #         bias_initializer=keras.initializers.glorot_uniform(seed),
+    #         kernel_regularizer=l1(l1_reg)
+    #     ))
+    #     model.compile(loss='mean_squared_error', optimizer='adam')
+    #     return model

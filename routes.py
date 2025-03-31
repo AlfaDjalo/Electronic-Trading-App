@@ -109,7 +109,12 @@ def setup_routes(app):
             tickers = [{'Code': 'BTC-USD', 'Company': 'Bitcoin'}]
 
         comparisons = session.get('comparisons', [])  # Retrieve the list of comparisons
-        return render_template("index.html", tickers=tickers, comparisons=comparisons, category=category)
+
+        # Load models from model_parameters.json
+        with open('model_parameters.json') as f:
+            models = list(json.load(f).keys())
+
+        return render_template("index.html", tickers=tickers, comparisons=comparisons, category=category, models=models)
 
     @app.route('/create_comparison', methods=['POST'])
     def create_comparison():
@@ -362,6 +367,12 @@ def setup_routes(app):
                     model_handler.ML(model_handler.simpleRNN_)
                 elif model == 'LSTM':
                     model_handler.ML(model_handler.lstm_)
+                elif model == 'GRU':
+                    model_handler.ML(model_handler.gru_)
+                elif model == 'AlphaRNN':
+                    model_handler.ML(model_handler.alpharnn_)
+                elif model == 'AlphatRNN':
+                    model_handler.ML(model_handler.alphatrnn_)
 
                 y_pred = model_handler.model.predict(ML_data['x_test'])
                 if y_test is None:  # Ensure y_test is assigned only once
