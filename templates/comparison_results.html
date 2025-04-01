@@ -43,12 +43,16 @@
 <hr>
 <h4>Prediction Chart</h4>
 <img src="data:image/png;base64,{{ prediction_chart_url }}" alt="Prediction Chart" class="img-fluid">
+{% else %}
+<p>No prediction chart available.</p>
 {% endif %}
 
 {% if error_chart_url %}
 <hr>
 <h4>Error Chart (All Models)</h4>
 <img src="data:image/png;base64,{{ error_chart_url }}" alt="Error Chart" class="img-fluid">
+{% else %}
+<p>No error chart available.</p>
 {% endif %}
 
 <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>

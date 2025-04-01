@@ -125,11 +125,11 @@ def setup_routes(app):
             Response: Redirect to the home page.
         """
         nonlocal comparison_counter  # Use the counter to generate unique names
-        category = request.form.get('category', 'default')  # Default to Australian stocks
+        category = request.form.get('category', 'australian')  # Default to Australian stocks
         print("Category", category)
         ticker = request.form.get('ticker')
-        if category == 'australian':
-            ticker += '.AX'
+        if category == 'australian' and not ticker.endswith('.AX'):
+            ticker += '.AX'  # Ensure Australian tickers have ".AX"
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
         model = request.form.get('model')
@@ -311,7 +311,9 @@ def setup_routes(app):
         Returns:
             Response: Rendered HTML template with comparison results.
         """
+        print("Running comparisons")
         comparisons = session.get('comparisons', [])
+        print(request.method)
         if not comparisons:
             return render_template('comparison_results.html', results=[], unique_tickers=[], selected_ticker=None)
 
@@ -346,11 +348,14 @@ def setup_routes(app):
             )
 
         for comparison in filtered_comparisons:
+            print("Running comparison ", comparison['name'])
             ticker = comparison['ticker']
             start_date = comparison['start_date']
             end_date = comparison['end_date']
             model = comparison['model']
             params = comparison.get('params', {})
+            print("Params ")
+            print(params)
             stock_data = StockData(ticker, start_date, end_date, load_data=True, create_model_data=True)
             features = stock_data.create_feature_list(comparison)
             target = stock_data.create_target(comparison)
