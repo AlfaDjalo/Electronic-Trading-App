@@ -12,6 +12,29 @@
 
 <hr>
 
+<h4>Add New Comparison</h4>
+<form method="post" action="{{ url_for('create_comparison') }}">
+    <div class="form-group">
+        <label for="model">Model</label>
+        <select class="form-control" id="model" name="model">
+            {% for model in models %}
+            <option value="{{ model }}">{{ model }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="lag_period">Lag Period</label>
+        <input type="number" class="form-control" id="lag_period" name="lag_period" min="0" value="{{ DEFAULT_LAG_PERIOD }}">
+    </div>
+    <div class="form-group">
+        <label for="forecast_period">Forecast Period</label>
+        <input type="number" class="form-control" id="forecast_period" name="forecast_period" min="0" value="{{ DEFAULT_FORECAST_PERIOD }}">
+    </div>
+    <button type="submit" class="btn btn-primary">Add Comparison</button>
+</form>
+
+<hr>
+
 <h4>Existing Comparisons</h4>
 <table class="table table-striped">
     <thead>
@@ -43,26 +66,5 @@
 
 <form method="post" action="{{ url_for('run_comparisons') }}">
     <button type="submit" class="btn btn-success">Run Comparisons</button>
-</form>
-
-<h4>Add New Comparison</h4>
-<form method="post" action="{{ url_for('create_comparison') }}">
-    <div class="form-group">
-        <label for="model">Model</label>
-        <select class="form-control" id="model" name="model">
-            {% for model in models %}
-            <option value="{{ model }}">{{ model }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="form-group">
-        <label for="lag_period">Lag Period</label>
-        <input type="number" class="form-control" id="lag_period" name="lag_period" min="0" value="{{ DEFAULT_LAG_PERIOD }}">
-    </div>
-    <div class="form-group">
-        <label for="forecast_period">Forecast Period</label>
-        <input type="number" class="form-control" id="forecast_period" name="forecast_period" min="0" value="{{ DEFAULT_FORECAST_PERIOD }}">
-    </div>
-    <button type="submit" class="btn btn-primary">Add Comparison</button>
 </form>
 {% endblock %}

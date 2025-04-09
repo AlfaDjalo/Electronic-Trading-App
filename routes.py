@@ -670,14 +670,37 @@ def setup_routes(app):
 def create_prediction_chart(x_test_index, y_test, predictions):
     """
     Generate a chart comparing actual values and multiple predicted series.
+    Ensure all time series have data for the same dates.
 
     Returns:
         str: Filepath of the saved chart image.
     """
+    # Align lengths of y_test and x_test_index
+    min_length = min(len(x_test_index), len(y_test))
+    x_test_index = x_test_index[:min_length]
+    y_test = y_test[:min_length].flatten()  # Ensure y_test is 1-dimensional
+
+    # Find common dates across all series
+    common_dates = set(x_test_index)
+    for y_pred in predictions.values():
+        common_dates &= set(x_test_index[:len(y_pred)])  # Ensure alignment with prediction length
+
+    # Reduce to common dates
+    common_dates = sorted(common_dates)
+    y_test = pd.Series(y_test, index=x_test_index).loc[common_dates]
+    predictions = {
+        model: pd.Series(
+            y_pred[:min(len(y_pred), len(x_test_index))].flatten(),  # Flatten y_pred
+            index=x_test_index[:min(len(y_pred), len(x_test_index))]  # Truncate x_test_index
+        ).loc[common_dates]
+        for model, y_pred in predictions.items()
+    }
+
+    # Plot the chart
     fig, ax = plt.subplots(figsize=(15, 8))
-    ax.plot(x_test_index, y_test, label="Actual", linestyle='dashed')
+    ax.plot(common_dates, y_test, label="Actual", linestyle='dashed')
     for model_name, y_pred in predictions.items():
-        ax.plot(x_test_index, y_pred, label=f"Predicted ({model_name})")
+        ax.plot(common_dates, y_pred, label=f"Predicted ({model_name})")
     ax.set_title("Predictions vs Actual Values")
     ax.set_xlabel("Date")
     ax.set_ylabel("Values")
@@ -691,13 +714,30 @@ def create_prediction_chart(x_test_index, y_test, predictions):
 def create_error_chart(x_test_index, errors):
     """
     Generate a chart showing the error series for all models.
+    Ensure all time series have data for the same dates.
 
     Returns:
         str: Filepath of the saved error chart image.
     """
+    # Find common dates across all series
+    common_dates = set(x_test_index)
+    for error in errors.values():
+        common_dates &= set(x_test_index[:len(error)])  # Ensure alignment with error length
+
+    # Reduce to common dates
+    common_dates = sorted(common_dates)
+    errors = {
+        model: pd.Series(
+            error[:len(common_dates)].flatten(),  # Truncate error array to match common_dates length
+            index=x_test_index[:len(common_dates)]  # Truncate x_test_index to match common_dates length
+        ).loc[common_dates]
+        for model, error in errors.items()
+    }
+
+    # Plot the chart
     fig, ax = plt.subplots(figsize=(15, 8))
     for model_name, error in errors.items():
-        ax.plot(x_test_index, error, label=f"Error ({model_name})")
+        ax.plot(common_dates, error, label=f"Error ({model_name})")
     ax.set_title("Error Between Predictions and Actual Values")
     ax.set_xlabel("Date")
     ax.set_ylabel("Error")
