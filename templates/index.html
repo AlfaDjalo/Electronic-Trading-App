@@ -5,94 +5,34 @@
 {% block content %}
 <h3>Welcome to the Trading App</h3>
 
-<form method="get" action="{{ url_for('index') }}">
+<form method="post" action="{{ url_for('set_ticker_and_dates') }}">
     <div class="form-group">
         <label for="category">Select Category</label>
-        <select class="form-control" id="category" name="category" onchange="this.form.submit()">
+        <select class="form-control" id="category" name="category">
             <option value="australian" {% if category == "australian" %}selected{% endif %}>Australian Stocks</option>
             <option value="us" {% if category == "us" %}selected{% endif %}>US Stocks</option>
             <option value="fx" {% if category == "fx" %}selected{% endif %}>Forex</option>
             <option value="crypto" {% if category == "crypto" %}selected{% endif %}>Cryptocurrency</option>
         </select>
     </div>
-</form>
-
-<hr>
-
-<h4>Create a New Comparison</h4>
-<form method="post" action="{{ url_for('create_comparison') }}">
-    <input type="hidden" name="category" value="{{ category }}">  <!-- Add hidden input for category -->
     <div class="form-group">
         <label for="ticker">Select Ticker</label>
         <select class="form-control" id="ticker" name="ticker">
             {% for ticker in tickers %}
-            <option value="{{ ticker.Code }}">{{ ticker.Company }}</option>
+            <option value="{{ ticker.Code }}" {% if session_ticker == ticker.Code %}selected{% endif %}>
+                {{ ticker.Company }}
+            </option>
             {% endfor %}
         </select>
     </div>
     <div class="form-group">
         <label for="start_date">Start Date</label>
-        <input type="text" class="form-control datepicker" id="start_date" name="start_date" value="2014-12-31">
+        <input type="text" class="form-control datepicker" id="start_date" name="start_date" value="{{ session_start_date if session_start_date else 'YYYY-MM-DD' }}">
     </div>
     <div class="form-group">
         <label for="end_date">End Date</label>
-        <input type="text" class="form-control datepicker" id="end_date" name="end_date" value="2024-12-31">
+        <input type="text" class="form-control datepicker" id="end_date" name="end_date" value="{{ session_end_date if session_end_date else 'YYYY-MM-DD' }}">
     </div>
-    <div class="form-group">
-        <label for="model">Select Model</label>
-        <select class="form-control" id="model" name="model">
-            {% for model in models %}
-            <option value="{{ model }}">{{ model }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <button type="submit" class="btn btn-primary">Create Comparison</button>
+    <button type="submit" class="btn btn-primary mt-2">Save</button>
 </form>
-
-<hr>
-
-<h4>Existing Comparisons</h4>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Ticker</th>
-            <th>Model</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for comparison in comparisons %}
-        <tr>
-            <td>{{ comparison.name }}</td>
-            <td>{{ comparison.ticker }}</td>
-            <td>{{ comparison.model }}</td>
-            <td>
-                <a href="{{ url_for('edit_comparison', index=loop.index0) }}" class="btn btn-warning btn-sm">Edit</a>
-                <a href="{{ url_for('delete_comparison', index=loop.index0) }}" class="btn btn-danger btn-sm">Delete</a>
-                <a href="{{ url_for('set_parameters', index=loop.index0) }}" class="btn btn-info btn-sm">Set Parameters</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<div class="mt-3">
-    <form method="post" action="{{ url_for('run_comparisons') }}" style="display: inline;">
-        <button type="submit" class="btn btn-success">Run Comparisons</button>
-    </form>
-    <form method="post" action="{{ url_for('clear_comparisons') }}" style="display: inline;">
-        <button type="submit" class="btn btn-danger">Clear All Comparisons</button>
-    </form>
-</div>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
-<script>
-    $(document).ready(function(){
-        $('.datepicker').datepicker({
-            format: 'yyyy-mm-dd'
-        });
-    });
-</script>
 {% endblock %}

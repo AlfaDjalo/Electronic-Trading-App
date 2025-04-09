@@ -6,9 +6,9 @@
 <h3>Set Parameters for {{ model }}</h3>
 
 <div>
-    <p><strong>Ticker:</strong> {{ comparison.ticker }}</p>
-    <p><strong>Start Date:</strong> {{ comparison.start_date }}</p>
-    <p><strong>End Date:</strong> {{ comparison.end_date }}</p>
+    <p><strong>Ticker:</strong> {{ ticker }}</p> <!-- Use ticker from session -->
+    <p><strong>Start Date:</strong> {{ start_date }}</p> <!-- Use start_date from session -->
+    <p><strong>End Date:</strong> {{ end_date }}</p> <!-- Use end_date from session -->
 </div>
 
 <form method="post">
@@ -44,7 +44,13 @@
         <input type="checkbox" id="use_log_returns" name="use_log_returns" {% if use_log_returns %}checked{% endif %}>
     </div>
 
+    <div class="form-group">
+        <label for="standardize">Standardize Features</label>
+        <input type="checkbox" id="standardize" name="standardize" value="true" 
+               {% if standardised %}checked{% endif %}>
+    </div>
+
     <button type="submit" class="btn btn-primary">Save Parameters</button>
-    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+    <a href="{{ url_for('comparison_page') }}" class="btn btn-secondary">Cancel</a>
 </form>
 {% endblock %}

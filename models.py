@@ -24,84 +24,84 @@ class ModelHandler:
         self.params = params
 
 
-    def split_data(self):
-        """Split the data into training and testing sets based on the train_date."""
-        self.df.dropna(inplace=True)
-        self.df = self.df.reset_index()  # Moves index columns back to normal columns
-        # print(self.df.columns)
+    # def split_data(self):
+    #     """Split the data into training and testing sets based on the train_date."""
+    #     self.df.dropna(inplace=True)
+    #     self.df = self.df.reset_index()  # Moves index columns back to normal columns
+    #     # print(self.df.columns)
         
-        train_mask = self.df['date'] <= self.train_date
-        test_mask = self.df['date'] > self.train_date
-        self.train_data = self.df[train_mask]
-        self.test_data = self.df[test_mask]
+    #     train_mask = self.df['date'] <= self.train_date
+    #     test_mask = self.df['date'] > self.train_date
+    #     self.train_data = self.df[train_mask]
+    #     self.test_data = self.df[test_mask]
 
-    def create_lagged_features(self, num_lags):
-        """Create lagged features for the regression model."""
-        if num_lags > 0:        
-            for i in range(1, num_lags + 1):
-                self.df['min_' + str(i) + '_close'] = self.df['close'].shift(i)
-        elif num_lags < 0:
-            self.df[f'fut_{-num_lags}_close'] = self.df['close'].shift(num_lags)
+    # def create_lagged_features(self, num_lags):
+    #     """Create lagged features for the regression model."""
+    #     if num_lags > 0:        
+    #         for i in range(1, num_lags + 1):
+    #             self.df['min_' + str(i) + '_close'] = self.df['close'].shift(i)
+    #     elif num_lags < 0:
+    #         self.df[f'fut_{-num_lags}_close'] = self.df['close'].shift(num_lags)
 
-        self.df.dropna(inplace=True)  # Drop rows with NaN values created by shifting
+    #     self.df.dropna(inplace=True)  # Drop rows with NaN values created by shifting
 
-        # Update train_data and test_data with the new features
-        train_mask = self.df['date'] <= self.train_date
-        test_mask = self.df['date'] > self.train_date
-        self.train_data = self.df[train_mask]
-        self.test_data = self.df[test_mask]
+    #     # Update train_data and test_data with the new features
+    #     train_mask = self.df['date'] <= self.train_date
+    #     test_mask = self.df['date'] > self.train_date
+    #     self.train_data = self.df[train_mask]
+    #     self.test_data = self.df[test_mask]
 
-    def create_trend_features(self, num_lags):
-        """Create lagged features for the regression model."""
-        self.create_lagged_features(num_lags+1)
+    # def create_trend_features(self, num_lags):
+    #     """Create lagged features for the regression model."""
+    #     self.create_lagged_features(num_lags+1)
 
-        overall_trend = 0
-        for i in range(1, num_lags + 1):
-            self.df['min_' + str(i) + '_trend'] = np.where(self.df['min_' + str(i) + '_close'] > self.df['min_' + str(i+1) + '_close'], 1, -1)
-            overall_trend += self.df['min_' + str(i) + '_trend']
+    #     overall_trend = 0
+    #     for i in range(1, num_lags + 1):
+    #         self.df['min_' + str(i) + '_trend'] = np.where(self.df['min_' + str(i) + '_close'] > self.df['min_' + str(i+1) + '_close'], 1, -1)
+    #         overall_trend += self.df['min_' + str(i) + '_trend']
 
-        self.df['trend_' + str(num_lags) + '_day'] = np.where(overall_trend > 0, 1, -1)
+    #     self.df['trend_' + str(num_lags) + '_day'] = np.where(overall_trend > 0, 1, -1)
 
-        # self.df['min_1_close'] = self.df['close'].shift(1)
-        # self.df['min_2_close'] = self.df['close'].shift(2)
-        self.df.dropna(inplace=True)  # Drop rows with NaN values created by shifting
+    #     # self.df['min_1_close'] = self.df['close'].shift(1)
+    #     # self.df['min_2_close'] = self.df['close'].shift(2)
+    #     self.df.dropna(inplace=True)  # Drop rows with NaN values created by shifting
 
-        # Update train_data and test_data with the new features
-        train_mask = self.df['date'] <= self.train_date
-        test_mask = self.df['date'] > self.train_date
-        self.train_data = self.df[train_mask]
-        self.test_data = self.df[test_mask]
+    #     # Update train_data and test_data with the new features
+    #     train_mask = self.df['date'] <= self.train_date
+    #     test_mask = self.df['date'] > self.train_date
+    #     self.train_data = self.df[train_mask]
+    #     self.test_data = self.df[test_mask]
 
-    def prepare_features(self):
-    # def prepare_features(self, features, target):
-        """Prepare features and target for training and testing."""
-        self.df.dropna(inplace=True)
-        self.X_train = self.train_data[self.features]
-        self.X_test = self.test_data[self.features]
-        self.Y_train = self.train_data[self.target]
-        self.Y_test = self.test_data[self.target]
-        return # X_train, X_test, y_train, y_test
+    # def prepare_features(self):
+    # # def prepare_features(self, features, target):
+    #     """Prepare features and target for training and testing."""
+    #     self.df.dropna(inplace=True)
+    #     self.X_train = self.train_data[self.features]
+    #     self.X_test = self.test_data[self.features]
+    #     self.Y_train = self.train_data[self.target]
+    #     self.Y_test = self.test_data[self.target]
+    #     return # X_train, X_test, y_train, y_test
 
-    def standardise_input(self, feature, drop=False):
+    # def standardise_input(self, feature, drop=False):
 
-        # mu = float(self.X_train[feature].mean())
-        # sigma = float(self.X_train[feature].std())
-        mu = float(self.X_train[feature].iloc[0])
-        sigma = float(self.X_train[feature].iloc[0])
+    #     # mu = float(self.X_train[feature].mean())
+    #     # sigma = float(self.X_train[feature].std())
+    #     mu = float(self.X_train[feature].iloc[0])
+    #     sigma = float(self.X_train[feature].iloc[0])
 
-        stdize_input = lambda x: (x - mu) / sigma
+    #     stdize_input = lambda x: (x - mu) / sigma
 
-        # X_train = X_train.apply(stdize_input)
-        # X_test = X_test.apply(stdize_input)
+    #     # X_train = X_train.apply(stdize_input)
+    #     # X_test = X_test.apply(stdize_input)
 
-        self.X_train = (self.X_train - mu) / sigma
-        self.X_test = (self.X_test - mu) / sigma
+    #     self.X_train = (self.X_train - mu) / sigma
+    #     self.X_test = (self.X_test - mu) / sigma
 
-        if drop==True:
-            self.X_train[feature].drop
-            self.X_test[feature].drop
+    #     if drop==True:
+    #         self.X_train[feature].drop
+    #         self.X_test[feature].drop
         
-        return
+    #     return
 
     def regression(self):
         """Perform simple regression."""
@@ -120,7 +120,7 @@ class ModelHandler:
 
         self.model = LinearRegression(fit_intercept=True)
         self.model.fit(self.data['x_train'], self.data['y_train'])
-        
+
         return
 
     # def regression(self):
@@ -292,16 +292,11 @@ class ModelHandler:
 
         return
 
-    def get_stats(self):
+    def get_stats(self, y_test, y_pred):
         """Calculate stats for the current model."""
-        y_pred = self.model.predict(self.data['x_test'])
-        # y_pred = self.model.predict(self.X_test)
-
         stats = {
-            'RMSE': f"{np.sqrt(mean_squared_error(self.data['y_test'], y_pred)):.3f}",
-            'Variance': f"{r2_score(self.data['y_test'], y_pred):.3f}"
-            # 'RMSE': f"{np.sqrt(mean_squared_error(self.Y_test, y_pred)):.3f}",
-            # 'Variance': f"{r2_score(self.Y_test, y_pred):.3f}"
+            'RMSE': f"{np.sqrt(mean_squared_error(y_test, y_pred)):.3f}",
+            'Variance': f"{r2_score(y_test, y_pred):.3f}"
         }
         return stats
 

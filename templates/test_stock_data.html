@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Test Stock Data{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Test Stock Data</h1>
+    <form method="get">
+        <div class="mb-3">
+            <label for="data_type" class="form-label">Data Type</label>
+            <select class="form-select" id="data_type" name="data_type" onchange="this.form.submit()">
+                {% for data_type in data_types %}
+                    <option value="{{ data_type }}" {% if data_type == selected_data_type %}selected{% endif %}>
+                        {{ data_type }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+
+    {% if error_message %}
+    <div class="alert alert-danger mt-3">
+        {{ error_message }}
+    </div>
+    {% endif %}
+
+    {% if data_preview %}
+    <h2 class="mt-5">Data Preview</h2>
+    <h3>First 5 Rows</h3>
+    <table class="table table-striped text-end">
+        <thead>
+            <tr>
+                {% for col in data_preview.head.columns %}
+                <th class="text-end">{{ col }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data_preview.head.values %}
+            <tr>
+                {% for cell in row %}
+                <td class="text-end">
+                    {% if cell is number %}
+                        {{ cell|floatformat(2)|intcomma }}
+                    {% elif cell is date %}
+                        {{ cell|date }}
+                    {% else %}
+                        {{ cell }}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h3>Last 5 Rows</h3>
+    <table class="table table-striped text-end">
+        <thead>
+            <tr>
+                {% for col in data_preview.tail.columns %}
+                <th class="text-end">{{ col }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data_preview.tail.values %}
+            <tr>
+                {% for cell in row %}
+                <td class="text-end">
+                    {% if cell is number %}
+                        {{ cell|floatformat(2)|intcomma }}
+                    {% elif cell is date %}
+                        {{ cell|date }}
+                    {% else %}
+                        {{ cell }}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <a href="{{ url_for('comparison_page') }}" class="btn btn-secondary mt-3">Back to Comparisons</a>
+</div>
+{% endblock %}

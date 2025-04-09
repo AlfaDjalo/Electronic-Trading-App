@@ -10,18 +10,6 @@
         <input type="text" class="form-control" id="name" name="name" value="{{ comparison.name }}">
     </div>
     <div class="form-group">
-        <label for="ticker">Ticker</label>
-        <input type="text" class="form-control" id="ticker" name="ticker" value="{{ comparison.ticker[:-3] }}">
-    </div>
-    <div class="form-group">
-        <label for="start_date">Start Date</label>
-        <input type="text" class="form-control datepicker" id="start_date" name="start_date" value="{{ comparison.start_date }}">
-    </div>
-    <div class="form-group">
-        <label for="end_date">End Date</label>
-        <input type="text" class="form-control datepicker" id="end_date" name="end_date" value="{{ comparison.end_date }}">
-    </div>
-    <div class="form-group">
         <label for="model">Model</label>
         <select class="form-control" id="model" name="model">
             <option value="LinearRegression" {% if comparison.model == "LinearRegression" %}selected{% endif %}>Linear Regression</option>
@@ -29,6 +17,15 @@
             <option value="RNN" {% if comparison.model == "RNN" %}selected{% endif %}>RNN</option>
         </select>
     </div>
+    <div class="form-group">
+        <label for="lag_period">Lag Period</label>
+        <input type="number" class="form-control" id="lag_period" name="lag_period" min="0" value="{{ comparison.lag_period or DEFAULT_LAG_PERIOD }}">
+    </div>
+    <div class="form-group">
+        <label for="forecast_period">Forecast Period</label>
+        <input type="number" class="form-control" id="forecast_period" name="forecast_period" min="0" value="{{ comparison.forecast_period or DEFAULT_FORECAST_PERIOD }}">
+    </div>
     <button type="submit" class="btn btn-primary">Save Changes</button>
+    <button type="submit" name="cancel" class="btn btn-secondary">Cancel</button>
 </form>
 {% endblock %}

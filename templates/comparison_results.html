@@ -3,24 +3,12 @@
 {% block title %}Comparison Results{% endblock %}
 
 {% block content %}
-<h3>Comparison Results</h3>
+<h3>Comparison Results for {{ selected_ticker }}</h3>
 
-<form method="get" action="{{ url_for('run_comparisons') }}">
-    <div class="form-group">
-        <label for="ticker_filter">Filter by Ticker</label>
-        <select class="form-control" id="ticker_filter" name="ticker" onchange="this.form.submit()">
-            {% for ticker in unique_tickers %}
-                <option value="{{ ticker }}" {% if ticker == selected_ticker %}selected{% endif %}>{{ ticker }}</option>
-            {% endfor %}
-        </select>
-    </div>
-</form>
-
-<table class="table table-striped">
+<table class="table">
     <thead>
         <tr>
             <th>Name</th>
-            <th>Ticker</th>
             <th>Model</th>
             <th>Stats</th>
             <th>Error</th>
@@ -30,7 +18,6 @@
         {% for result in results %}
         <tr>
             <td>{{ result.name }}</td>
-            <td>{{ result.ticker }}</td>
             <td>{{ result.model }}</td>
             <td>{{ result.stats }}</td>
             <td>{{ result.error }}</td>
@@ -39,21 +26,11 @@
     </tbody>
 </table>
 
-{% if prediction_chart_url %}
-<hr>
-<h4>Prediction Chart</h4>
-<img src="data:image/png;base64,{{ prediction_chart_url }}" alt="Prediction Chart" class="img-fluid">
-{% else %}
-<p>No prediction chart available.</p>
-{% endif %}
+<h4>Prediction vs Actual Chart</h4>
+<img src="{{ prediction_chart_url }}" alt="Prediction Chart" class="img-fluid">
 
-{% if error_chart_url %}
-<hr>
-<h4>Error Chart (All Models)</h4>
-<img src="data:image/png;base64,{{ error_chart_url }}" alt="Error Chart" class="img-fluid">
-{% else %}
-<p>No error chart available.</p>
-{% endif %}
+<h4>Error Chart</h4>
+<img src="{{ error_chart_url }}" alt="Error Chart" class="img-fluid">
 
-<a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
+<a href="{{ url_for('comparison_page') }}" class="btn btn-primary mt-3">Back to Comparisons</a>
 {% endblock %}
