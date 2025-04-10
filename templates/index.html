@@ -33,6 +33,39 @@
         <label for="end_date">End Date</label>
         <input type="text" class="form-control datepicker" id="end_date" name="end_date" value="{{ session_end_date if session_end_date else 'YYYY-MM-DD' }}">
     </div>
+    <div class="form-group" id="lob-data-group" style="display: none;">
+        <input type="checkbox" id="use_lob_data" name="use_lob_data" {% if session.use_lob_data %}checked{% endif %}>
+        <label for="use_lob_data">Include LOB Data</label>
+    </div>
     <button type="submit" class="btn btn-primary mt-2">Save</button>
 </form>
+
+<script>
+    document.getElementById('category').addEventListener('change', function () {
+        const category = this.value;
+        const lobDataGroup = document.getElementById('lob-data-group');
+        if (category === 'crypto') {
+            lobDataGroup.style.display = 'block';
+        } else {
+            lobDataGroup.style.display = 'none';
+        }
+
+        fetch(`/get_tickers/${category}`)
+            .then(response => response.json())
+            .then(data => {
+                const tickerSelect = document.getElementById('ticker');
+                tickerSelect.innerHTML = ''; // Clear existing options
+                data.tickers.forEach(ticker => {
+                    const option = document.createElement('option');
+                    option.value = ticker.Code;
+                    option.textContent = ticker.Company;
+                    tickerSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error fetching tickers:', error));
+    });
+
+    // Trigger change event on page load to handle initial state
+    document.getElementById('category').dispatchEvent(new Event('change'));
+</script>
 {% endblock %}

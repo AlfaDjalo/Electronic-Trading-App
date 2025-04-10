@@ -342,7 +342,17 @@ def setup_routes(app):
 
         for comparison in comparisons:
             try:
-                stock_data = StockData(ticker, session.get('start_date'), session.get('end_date'), load_data=True)
+                stock_data = StockData(
+                    ticker, 
+                    session.get('start_date'), 
+                    session.get('end_date'), 
+                    load_data=True, 
+                    use_lob_data=session.get('use_lob_data', False), 
+                    lob_filepath="path/to/lob_data.csv"  # Replace with actual LOB file path
+                )
+                if session.get('use_lob_data', False):
+                    stock_data.merge_lob_with_stock_data()
+
                 ml_data = MLData(
                     raw_data=stock_data.get_raw_data(),
                     lag_period=int(comparison.get('lag_period', 0)),
@@ -350,7 +360,8 @@ def setup_routes(app):
                     features=[],
                     target=[],
                     log_returns=comparison.get('use_log_returns', False),
-                    standardised=comparison.get('params', {}).get('standardise', {}).get('value', False)
+                    standardised=comparison.get('params', {}).get('standardise', {}).get('value', False),
+                    use_lob_data=session.get('use_lob_data', False)
                 )
                 model_handler = ModelHandler(ml_data.get_data(), comparison.get('params', {}))
                 model = comparison['model']
@@ -627,6 +638,7 @@ def setup_routes(app):
         ticker = request.form.get("ticker")
         start_date = request.form.get("start_date")
         end_date = request.form.get("end_date")
+        use_lob_data = request.form.get("use_lob_data", "off") == "on"  # Handle LOB data checkbox
 
         # Validate ticker
         if not ticker:
@@ -647,9 +659,24 @@ def setup_routes(app):
         session["ticker"] = ticker
         session["start_date"] = start_date.strftime("%Y-%m-%d")
         session["end_date"] = end_date.strftime("%Y-%m-%d")
+        session["use_lob_data"] = use_lob_data  # Save LOB data flag to session
         session["comparisons"] = []  # Clear comparisons when changing ticker or dates
 
         return redirect(url_for("comparison_page"))
+
+    @app.route('/get_tickers/<category>', methods=['GET'])
+    def get_tickers(category):
+        """
+        Fetch tickers for the given category.
+
+        Args:
+            category (str): The selected category.
+
+        Returns:
+            Response: JSON response containing the list of tickers.
+        """
+        tickers = get_tickers_by_category(category)
+        return jsonify({'tickers': tickers})
 
     def get_tickers_by_category(category):
         # Helper function to fetch tickers based on category

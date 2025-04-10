@@ -3,7 +3,7 @@ import numpy as np
 
 class MLData:
     def __init__(self, raw_data, lag_period, forecast_period, features=None, target=None, 
-                 split_date='2022-12-31', feature_column='close', log_returns=False, standardised=False):
+                 split_date='2022-12-31', feature_column='close', log_returns=False, standardised=False, use_lob_data=False):
         """
         Initialise MLData object.
 
@@ -17,6 +17,7 @@ class MLData:
             feature_column (str): Column to be used as the main feature.
             log_returns (bool): Whether to calculate log returns for the feature column.
             standardised (bool): Whether to standardise the input features.
+            use_lob_data (bool): Whether to include LOB data in features.
         """
         # self.data = stock_data.data.copy()
         self.data = raw_data.copy()
@@ -30,6 +31,7 @@ class MLData:
         )
         self.log_returns = log_returns
         self.standardised = standardised
+        self.use_lob_data = use_lob_data
 
         self.x_train = None
         self.y_train = None
@@ -40,6 +42,11 @@ class MLData:
 
     def process_data(self):
         try:
+            if self.use_lob_data:
+                print("Processing LOB data...")
+                # Ensure LOB-related columns are included in features
+                lob_columns = [col for col in self.data.columns if col.startswith('lob_')]
+                self.features.extend(lob_columns)
             if self.log_returns:
                 self.calculate_log_returns()
             # print(self.data)

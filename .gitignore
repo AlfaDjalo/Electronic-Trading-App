@@ -2,6 +2,7 @@
 env11/
 env/
 my_env/
+temp_charts/
 
 # Ignore Python cache files
 *.pyc
@@ -14,3 +15,4 @@ Thumbs.db
 # Ignore logs and temporary files
 *.log
 *.tmp
+
