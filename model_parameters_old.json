@@ -1,7 +1,25 @@
 {
     "LinearRegression": {
+        "forward_projection_days": {
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "max": 5
+                }
     },
     "LSTM": {
+        "num_days_lag": {
+            "type": "integer",
+            "default": 3,
+            "min": 1,
+            "max": 10
+        },
+        "forward_projection_days": {
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "max": 5
+        },
         "num_units": {
             "type": "integer",
             "default": 10,
@@ -45,9 +63,25 @@
             "values": [
                 "adam"
             ]
-        } 
+        },   
+        "normalise": {
+            "type": "boolean",
+            "default": 0
+        }
     },
     "RNN": {
+        "num_days_lag": {
+            "type": "integer",
+            "default": 3,
+            "min": 1,
+            "max": 10
+        },
+        "forward_projection_days": {
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "max": 5
+        },
         "num_units": {
             "type": "integer",
             "default": 10,
@@ -74,9 +108,25 @@
             "default": 1024,
             "min": 64,
             "max": 4096
+        },
+        "normalise": {
+            "type": "boolean",
+            "default": 0
         }
     },
     "AlphaRNN": {
+        "num_days_lag": {
+            "type": "integer",
+            "default": 3,
+            "min": 1,
+            "max": 10
+        },
+        "forward_projection_days": {
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "max": 5
+        },
         "num_units": {
             "type": "integer",
             "default": 10,
@@ -103,9 +153,25 @@
             "default": 1024,
             "min": 64,
             "max": 4096
+        },
+        "normalise": {
+            "type": "boolean",
+            "default": 0
         }
     },
     "alphatRNN": {
+        "num_days_lag": {
+            "type": "integer",
+            "default": 3,
+            "min": 1,
+            "max": 10
+        },
+        "forward_projection_days": {
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "max": 5
+        },
         "num_units": {
             "type": "integer",
             "default": 10,
@@ -132,9 +198,25 @@
             "default": 1024,
             "min": 64,
             "max": 4096
+        },
+        "normalise": {
+            "type": "boolean",
+            "default": 0
         }
     },
     "GRU": {
+        "num_days_lag": {
+            "type": "integer",
+            "default": 3,
+            "min": 1,
+            "max": 10
+        },
+        "forward_projection_days": {
+            "type": "integer",
+            "default": 1,
+            "min": 1,
+            "max": 5
+        },
         "num_units": {
             "type": "integer",
             "default": 10,
@@ -181,6 +263,10 @@
             "default": 1024,
             "min": 64,
             "max": 4096
+        },
+        "normalise": {
+            "type": "boolean",
+            "default": 0
         }
     }
 }

@@ -1,27 +1,24 @@
 import pytest
-import sys
-import os
-
-# Add the project directory to the Python module search path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from app import app
+from flask import Flask, session
+from routes import setup_routes
 
 @pytest.fixture
 def client():
     """Set up a test client for the Flask app."""
+    app = Flask(__name__)
     app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for testing
+    app.secret_key = 'test_secret_key'
+    setup_routes(app)
     with app.test_client() as client:
         yield client
 
-def test_home_page(client):
-    """Test the home page loads successfully."""
+def test_index_route(client):
+    """Test the index route."""
     response = client.get('/')
     assert response.status_code == 200
-    assert b"Welcome to the Trading App" in response.data
+    assert b"index.html" in response.data
 
-def test_create_comparison(client):
+def test_create_comparison_route(client):
     """Test creating a new comparison."""
     with client.session_transaction() as session:
         session['ticker'] = 'AAPL'
@@ -29,28 +26,55 @@ def test_create_comparison(client):
         session['end_date'] = '2022-12-31'
     response = client.post('/create_comparison', data={
         'model': 'LinearRegression',
-        'lag_period': 3,
-        'forecast_period': 1
+        'feature_set': 'OHLCV',
+        'normalise': 'on'
     })
     assert response.status_code == 200
-    assert b"Manage Comparisons" in response.data
+    assert b"comparison_page.html" in response.data
 
-def test_set_parameters(client):
+def test_set_parameters_route(client):
     """Test setting parameters for a comparison."""
     with client.session_transaction() as session:
         session['comparisons'] = [{
             'name': 'Comparison_1',
             'model': 'LinearRegression',
-            'params': {
-                'forward_projection_days': {'type': 'integer', 'default': 1, 'value': 1, 'min': 1, 'max': 5}
-            }
+            'params': {'param1': {'type': 'integer', 'value': 1}}
         }]
-    response = client.post('/set_parameters/0', data={
-        'forward_projection_days': 2
+    response = client.post('/set_parameters/0', data={'param1': '2'})
+    assert response.status_code == 302  # Redirect after successful update
+
+def test_edit_comparison_route(client):
+    """Test editing an existing comparison."""
+    with client.session_transaction() as session:
+        session['comparisons'] = [{
+            'name': 'Comparison_1',
+            'model': 'LinearRegression',
+            'feature_set': 'OHLCV',
+            'normalise': False
+        }]
+    response = client.post('/edit_comparison/0', data={
+        'name': 'Updated_Comparison',
+        'model': 'LSTM',
+        'feature_set': 'OHLCV',
+        'normalise': 'on'
     })
     assert response.status_code == 302  # Redirect after successful update
 
-def test_run_comparisons(client):
+def test_delete_comparison_route(client):
+    """Test deleting a comparison."""
+    with client.session_transaction() as session:
+        session['comparisons'] = [{'name': 'Comparison_1'}]
+    response = client.post('/delete_comparison/0')
+    assert response.status_code == 302  # Redirect after deletion
+
+def test_clear_comparisons_route(client):
+    """Test clearing all comparisons."""
+    with client.session_transaction() as session:
+        session['comparisons'] = [{'name': 'Comparison_1'}]
+    response = client.post('/clear_comparisons')
+    assert response.status_code == 302  # Redirect after clearing
+
+def test_run_comparisons_route(client):
     """Test running comparisons."""
     with client.session_transaction() as session:
         session['ticker'] = 'AAPL'
@@ -59,14 +83,12 @@ def test_run_comparisons(client):
         session['comparisons'] = [{
             'name': 'Comparison_1',
             'model': 'LinearRegression',
-            'params': {
-                'forward_projection_days': {'type': 'integer', 'default': 1, 'value': 1, 'min': 1, 'max': 5}
-            }
+            'params': {'param1': {'type': 'integer', 'value': 1}}
         }]
     response = client.post('/run_comparisons')
     assert response.status_code == 302  # Redirect to results page
 
-def test_comparison_results(client):
+def test_comparison_results_route(client):
     """Test the comparison results page."""
     with client.session_transaction() as session:
         session['comparison_results'] = {
@@ -79,4 +101,26 @@ def test_comparison_results(client):
         }
     response = client.get('/comparison_results')
     assert response.status_code == 200
-    assert b"Comparison Results for AAPL" in response.data
+    assert b"comparison_results.html" in response.data
+
+def test_manage_feature_sets_route(client):
+    """Test the manage_feature_sets route."""
+    response = client.get('/manage_feature_sets')
+    assert response.status_code == 200
+    assert b"manage_feature_sets.html" in response.data
+
+def test_set_ticker_and_dates_route(client):
+    """Test setting ticker and dates."""
+    response = client.post('/set_ticker_and_dates', data={
+        'category': 'us',
+        'ticker': 'AAPL',
+        'start_date': '2022-01-01',
+        'end_date': '2022-12-31'
+    })
+    assert response.status_code == 302  # Redirect after successful update
+
+def test_get_tickers_route(client):
+    """Test fetching tickers by category."""
+    response = client.get('/get_tickers/us')
+    assert response.status_code == 200
+    assert b"AAPL" in response.data

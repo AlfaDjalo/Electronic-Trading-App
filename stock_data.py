@@ -10,8 +10,12 @@ import yfinance as yf
 DEFAULT_START_DATE = '2014-12-31'
 DEFAULT_END_DATE = '2024-12-31'
 
+# Global variable for LOB data filepath
+LOB_FILEPATH = "lob_data/order_book_history.csv"
+
 class StockData:
-    def __init__(self, ticker, start_date=DEFAULT_START_DATE, end_date=DEFAULT_END_DATE, split_date='2022-12-31', load_data=False, create_model_data=False, use_lob_data=False, lob_filepath=None):
+    def __init__(self, data_type, ticker, start_date=DEFAULT_START_DATE, end_date=DEFAULT_END_DATE, load_data=False):
+    # def __init__(self, ticker, start_date=DEFAULT_START_DATE, end_date=DEFAULT_END_DATE, split_date='2022-12-31', load_data=False, create_model_data=False, use_lob_data=False):
         """
         Initialise StockData object.
 
@@ -23,40 +27,64 @@ class StockData:
             load_data (bool): Whether to load stock data immediately.
             create_model_data (bool): Whether to create model data immediately.
             use_lob_data (bool): Whether to use limit order book (LOB) data.
-            lob_filepath (str): Filepath for LOB data CSV file.
         """
+        self.data_type = data_type
         self.ticker = ticker
         self.start_date = start_date
         self.end_date = end_date
         self.data = None
 
-        self.split_date = split_date
-        self.x_train = None
-        self.y_train = None
-        self.x_test = None
-        self.y_test = None
-        self.feature_column = 'close'
-        self.features = []
-        self.target = []
+        # self.split_date = split_date
+        # self.x_train = None
+        # self.y_train = None
+        # self.x_test = None
+        # self.y_test = None
+        # self.feature_column = 'close'
+        # self.features = []
+        # self.target = []
 
-        self.use_lob_data = use_lob_data
-        self.lob_filepath = lob_filepath
-        self.lob_data = None  # Initialize LOB data attribute
+        # self.use_lob_data = use_lob_data
+        # self.lob_data = None  # Initialize LOB data attribute
+        # self.data_type = "intraday" if self.use_lob_data else "daily"  # Set data_type based on use_lob_data
 
         if load_data is True:
-            self.load_data()
-            self.loaded = True
+            if self.data_type == "intraday":
+                if LOB_FILEPATH:
+                    self.load_lob_data(LOB_FILEPATH)
+                    self.loaded = True
+                else:
+                    raise ValueError("LOB data file path must be provided for intraday data.")
+            else:
+                self.load_daily_data()
+                self.loaded = True
         else:
             self.loaded = False
 
-        if self.use_lob_data and self.lob_filepath:
-            self.load_lob_data(self.lob_filepath)
+        # if load_data is True:
+        #     if self.use_lob_data:
+        #         if LOB_FILEPATH:
+        #             self.load_lob_data(LOB_FILEPATH)
+        #             self.loaded = True
+        #         else:
+        #             raise ValueError("LOB data file path must be provided when use_lob_data is True.")
+        #     else:
+        #         self.load_data()
+        #         self.loaded = True
+        # else:
+        #     self.loaded = False
 
-        if create_model_data is True and self.loaded is True:
-            self.split_data() # !!! Need to use full
-            self.model_data_created = True
-        else:
-            self.model_data_created = False
+        # if create_model_data is True and self.loaded is True:
+        #     self.split_data() # !!! Need to use full
+        #     self.model_data_created = True
+        # else:
+        #     self.model_data_created = False
+
+    def __repr__(self):
+        """
+        Representation of StockData object
+        
+        """
+        return self.data.head(5)
 
     def set_ticker(self, ticker, reload = False):
         """
@@ -90,6 +118,15 @@ class StockData:
         else:
             self.loaded = False
 
+    def get_data_type(self):
+        """
+        Get the current data type.
+
+        Returns:
+            str: Current data type.
+        """
+        return self.data_type
+
     def get_ticker(self):
         """
         Get the current stock ticker.
@@ -108,37 +145,54 @@ class StockData:
         """
         return { "start_date":self.start_date, "end_date": self.end_date }
 
-    def get_raw_data(self):
+    def get_data(self):
         """
         Get the loaded stock data.
 
         Returns:
             pd.DataFrame: DataFrame containing stock data.
         """
+        if self.data is None:
+            raise ValueError("Stock data is not loaded.")
         return self.data
 
-    def get_model_data(self):
-        """
-        Get the training and testing data.
+    # def get_raw_data(self):
+    #     """
+    #     Get the loaded stock data.
 
-        Returns:
-            dict: Dictionary containing 'x_train', 'y_train', 'x_test', and 'y_test'.
-        """
-        return {'x_train': self.x_train, 'y_train': self.y_train, 'x_test': self.x_test, 'y_test': self.y_test }
+    #     Returns:
+    #         pd.DataFrame: DataFrame containing stock data.
+    #     """
+    #     return self.data
 
-    def load_data(self):
+    # def get_model_data(self):
+    #     """
+    #     Get the training and testing data.
+
+    #     Returns:
+    #         dict: Dictionary containing 'x_train', 'y_train', 'x_test', and 'y_test'.
+    #     """
+    #     return {'x_train': self.x_train, 'y_train': self.y_train, 'x_test': self.x_test, 'y_test': self.y_test }
+
+    def load_daily_data(self):
         """
         Load stock data for the specified ticker and date range.
 
         Returns:
             bool: True if data is loaded successfully, None otherwise.
         """
+        print(f"Loading data for {self.ticker} from {self.start_date} to {self.end_date}...")
+        if not self.ticker:
+            print("No ticker provided.")
+            return False
         try:
             df = yf.download(tickers=self.ticker,
-                        start=self.start_date,
-                        end=self.end_date,
-                        auto_adjust=False)
+                             start=self.start_date,
+                             end=self.end_date,
+                             auto_adjust=False)
 
+            if df.empty:
+                raise ValueError(f"No data found for ticker {self.ticker} in the specified date range.")
 
             df.index.name = 'date'
 
@@ -156,7 +210,7 @@ class StockData:
 
             if nof_missing_values > 0:
                 print(nof_missing_values, 'observations are missing.')
-                print('This is {:.3f}% of the total.'.format(nof_missing_values*100/len(df)))
+                print('This is {:.3f}% of the total.'.format(nof_missing_values * 100 / len(df)))
 
                 df['close'] = df['close'].bfill()
                 nof_missing_values = sum(np.isnan(df['close']))
@@ -164,10 +218,10 @@ class StockData:
 
             return True
 
+        except ValueError as e:
+            print(f"ValueError: {e}")
         except Exception as e:
-
             print("Failure loading: ", self.ticker)
-
             print(e)
 
         return False
@@ -182,8 +236,15 @@ class StockData:
         Returns:
             bool: True if LOB data is loaded successfully, False otherwise.
         """
+        print(f"Loading LOB data from {filepath}...")
+        if not filepath:
+            print("No LOB data file provided.")
+            return False
         try:
             lob_df = pd.read_csv(filepath)
+
+            if lob_df.empty:
+                raise ValueError(f"LOB data file {filepath} is empty.")
 
             # Convert timestamp to datetime
             lob_df['timestamp'] = pd.to_datetime(lob_df['timestamp'], unit='s')
@@ -194,185 +255,85 @@ class StockData:
             # Ensure the index is sorted
             lob_df.sort_index(inplace=True)
 
-            self.lob_data = lob_df
+            # Add mid_price column
+            if 'bid_price_0' in lob_df.columns and 'ask_price_0' in lob_df.columns:
+                lob_df['mid_price'] = (lob_df['bid_price_0'] + lob_df['ask_price_0']) / 2
+            else:
+                print("Missing 'bid_price_0' or 'ask_price_0' columns. Cannot calculate 'mid_price'.")
+
+            self.data = lob_df
             print(f"LOB data loaded from {filepath}.")
+            print(self.data.head())
+
             return True
 
+        except ValueError as e:
+            print(f"ValueError: {e}")
         except Exception as e:
             print(f"Failed to load LOB data from {filepath}.")
             print(e)
             return False
 
-#     def split_data(self):
-#         """
-#         Split the data into training and testing sets based on the split_date.
+    # def get_lob_data(self):
+    #     """
+    #     Get the loaded LOB data.
 
-#         Raises:
-#             ValueError: If features or target are not defined or if the resulting datasets are empty.
-#         """
-#         # Ensure the index and split_date are datetime objects
-#         if not isinstance(self.data.index, pd.DatetimeIndex):
-#             self.data.index = pd.to_datetime(self.data.index)
-#         self.split_date = pd.to_datetime(self.split_date)
+    #     Returns:
+    #         pd.DataFrame: DataFrame containing LOB data.
+    #     """
+    #     if self.lob_data is None:
+    #         raise ValueError("LOB data is not loaded.")
+    #     return self.lob_data
 
-#         # Split the data
-#         train_data = self.data[:self.split_date]
-#         test_data = self.data[self.split_date:]
+    # def get_daily_data(self):
+    #     """
+    #     Get the loaded daily stock data.
 
-#         # Handle missing features or targets
-#         if not self.features:
-#             raise ValueError("Features are not defined. Ensure 'create_feature_list' is called.")
-#         if not self.target:
-#             raise ValueError("Target is not defined. Ensure 'create_target' is called.")
+    #     Returns:
+    #         pd.DataFrame: DataFrame containing daily stock data.
+    #     """
+    #     if self.data is None:
+    #         raise ValueError("Daily stock data is not loaded.")
+    #     return self.data
 
-#         self.x_train = train_data[self.features]
-#         self.x_test = test_data[self.features]
-#         self.y_train = train_data[self.target]
-#         self.y_test = test_data[self.target]
+    def get_available_fields(self):
+        """
+        Get available fields based on the data type.
 
-#         # Validate that the datasets are not empty
-#         if self.x_train.empty or self.y_train.empty:
-#             raise ValueError("Training dataset is empty. Check your feature and target creation.")
-#         if self.x_test.empty or self.y_test.empty:
-#             raise ValueError("Testing dataset is empty. Check your feature and target creation.")
-#         return
+        Args:
+            data_type (str): The type of data ('daily' or 'intraday').
 
-#     def create_lagged_features(self, num_lags):
-#         """
-#         Create lagged features for the regression model.
+        Returns:
+            list: A list of available fields.
+        """
+        return list(self.data.columns)
 
-#         Args:
-#             num_lags (int): Number of lagged periods to create. Positive for past lags, negative for future lags.
-#         """
-#         if num_lags > 0:
-#             for i in range(1, num_lags + 1):
-#                 self.data[f'min_{i}_{self.feature_column}'] = self.data[self.feature_column].shift(i)
-#         elif num_lags < 0:
-#             self.data[f'fut_{-num_lags}_{self.feature_column}'] = self.data[self.feature_column].shift(num_lags)
+    # def get_available_fields(self):
+    #     """
+    #     Get available fields based on the data type.
 
-#         self.data.dropna(inplace=True)  # Drop rows with NaN values created by shifting
+    #     Args:
+    #         data_type (str): The type of data ('daily' or 'intraday').
 
-#     def create_trend_features(self, num_lags):
-#         """
-#         Create lagged trend features for the regression model.
+    #     Returns:
+    #         list: A list of available fields.
+    #     """
+    #     print(self.data_type)
+    #     if self.data_type == 'daily':
+    #     # if self.data_type == 'daily' and self.data is not None:
+    #         return list(self.data.columns)
+    #     elif self.data_type == 'intraday':
+    #     # elif self.data_type == 'intraday' and self.lob_data is not None:
+    #         return list(self.lob_data.columns)
+    #     else:
+    #         return []
 
-#         Args:
-#             num_lags (int): Number of lagged periods to calculate trends.
-#         """
-#         self.create_lagged_features(num_lags + 1)
+    # def get_data_type(self):
+    #     """
+    #     Get the data type (daily or intraday).
 
-#         overall_trend = 0
-#         for i in range(1, num_lags + 1):
-#             self.data[f'min_{i}_trend'] = np.where(
-#                 self.data[f'min_{i}_{self.feature_column}'] > self.data[f'min_{i+1}_{self.feature_column}'], 1, -1
-#             )
-#             overall_trend += self.data[f'min_{i}_trend']
-
-#         self.data[f'trend_{num_lags}_day'] = np.where(overall_trend > 0, 1, -1)
-#         self.data.dropna(inplace=True)  # Drop rows with NaN values created by shifting
-
-#     def standardise_input(self, features):
-#         """
-#         Standardise the input features by subtracting the mean and dividing by the standard deviation.
-
-#         Args:
-#             features (list): List of feature column names to standardise.
-#         """
-#         for feature in features:
-#             mu = float(self.x_train[feature].mean())
-#             sigma = float(self.x_train[feature].std())
-#             self.x_train[feature] = (self.x_train[feature] - mu) / sigma
-#             self.x_test[feature] = (self.x_test[feature] - mu) / sigma
-
-#     def calculate_log_returns(self):
-# # !!! Need to make this use Feature column.
-#         """
-#         Calculate log returns for the close prices.
-
-#         Raises:
-#             ValueError: If 'close' column is not available in the data.
-#         """
-#         if 'close' in self.data.columns:
-#             self.data['log_returns'] = np.log(self.data['close'] / self.data['close'].shift(1))
-#             self.data.dropna(inplace=True)  # Remove rows with NaN values caused by shifting
-#             self.feature_column = 'log_returns'  # Update feature column to log returns
-#         else:
-#             raise ValueError("Close prices are not available in the data.")
-
-#     def create_feature_list(self, comparison):
-#         """
-#         Generate the list of required features based on the comparison details.
-
-#         Args:
-#             comparison (dict): Dictionary containing model and parameter details.
-
-#         Returns:
-#             list: List of feature column names.
-#         """
-#         model = comparison['model']
-#         parameters = comparison['params']
-
-#         # Handle log returns if enabled in the comparison
-#         if comparison.get('use_log_returns', False):
-#             self.calculate_log_returns()
-
-#         # Handle lagged features
-#         num_days_lag = int(parameters.get('num_days_lag', {}).get('value', 0))
-#         if num_days_lag > 0:
-#             self.create_lagged_features(num_days_lag)
-
-#         # Handle trend features for models that require them
-#         if model == 'LinearRegression' and 'trend_features' in parameters:
-#             trend_days = int(parameters.get('trend_features', {}).get('value', 0))
-#             if trend_days > 0:
-#                 self.create_trend_features(trend_days)
-
-#         self.features = [col for col in self.data.columns if col.startswith('min_') or col.startswith('trend_')]
-#         if not self.features:
-#             raise ValueError("No features were created. Check your feature creation logic.")
-#         return self.features
-
-#     def create_target(self, comparison):
-#         """
-#         Generate the target based on the comparison details.
-
-#         Args:
-#             comparison (dict): Dictionary containing model and parameter details.
-
-#         Returns:
-#             list: List of target column names.
-#         """
-#         parameters = comparison['params']
-#         forward_projection_days = int(parameters.get('forward_projection_days', {}).get('value', 0))
-
-#         if forward_projection_days > 1:
-#             self.create_lagged_features(-forward_projection_days)
-
-#         if forward_projection_days == 1:
-#             self.target = [self.feature_column]
-#         else:
-#             self.target = [f'fut_{forward_projection_days}_{self.feature_column}']
-
-#         if not self.target:
-#             raise ValueError("No target was created. Check your target creation logic.")
-#         return self.target
-
-#     def process_comparison(self, comparison):
-# # Review inputs and outputs
-#         """
-#         Process a comparison by creating features, targets, and splitting the data.
-
-#         Args:
-#             comparison (dict): The comparison details containing model, parameters, etc.
-#         """
-#         # Handle log returns if enabled in the comparison
-#         if comparison.get('use_log_returns', False):
-#             self.calculate_log_returns()
-
-#         # Create features and target based on the comparison
-#         self.create_feature_list(comparison)
-#         self.create_target(comparison)
-
-#         # Split the data into training and testing sets
-#         self.split_data()
+    #     Returns:
+    #         str: The data type of the stock data.
+    #     """
+    #     return self.data_type
 

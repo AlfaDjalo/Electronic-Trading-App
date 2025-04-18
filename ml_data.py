@@ -1,82 +1,78 @@
 import pandas as pd
 import numpy as np
+import json
+
+FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\feature_sets.json"
 
 class MLData:
-    def __init__(self, raw_data, lag_period, forecast_period, features=None, target=None, 
-                 split_date='2022-12-31', feature_column='close', log_returns=False, standardised=False, use_lob_data=False):
+    def __init__(self, raw_data, train_percentage=0.8, feature_set=None, normalise=False):
         """
         Initialise MLData object.
 
         Args:
-            stock_data (StockData): StockData object containing raw data.
-            lag_period (int): Number of lagged periods for features.
-            forecast_period (int): Number of periods for forecasting (negative lag).
-            features (list): List of feature column names.
-            target (str): Target column name.
-            split_date (str): Date to split data into training and testing sets.
-            feature_column (str): Column to be used as the main feature.
-            log_returns (bool): Whether to calculate log returns for the feature column.
-            standardised (bool): Whether to standardise the input features.
-            use_lob_data (bool): Whether to include LOB data in features.
+            raw_data (pd.DataFrame): DataFrame containing raw data (daily or intraday).
+            train_percentage (float): Percentage of data to use for training (0 < train_percentage < 1).
+            feature_set_name (str): Name of the feature set to apply.
+            normalise (bool): Whether to normalise the input features.
         """
-        # self.data = stock_data.data.copy()
+        if raw_data is None:
+            raise ValueError("Raw data cannot be None. Ensure StockData is properly loaded.")
+
+        if not (0 < train_percentage < 1):
+            raise ValueError("train_percentage must be a float between 0 and 1.")
+
         self.data = raw_data.copy()
-        self.feature_column = feature_column
-        self.split_date = pd.to_datetime(split_date)
-        self.lag_period = lag_period
-        self.forecast_period = forecast_period
-        self.features = features if features else raw_data.columns.tolist()
-        self.target = target if target else (
-            f'fut_{forecast_period}_{feature_column}' if forecast_period != 1 else feature_column
-        )
-        self.log_returns = log_returns
-        self.standardised = standardised
-        self.use_lob_data = use_lob_data
+        self.train_percentage = train_percentage
+        self.features = []
+        self.target = None
+        self.feature_set = feature_set
+        self.normalise = normalise
 
         self.x_train = None
         self.y_train = None
         self.x_test = None
         self.y_test = None
 
+        self.normalisation_params = {}  # Dictionary to store mean and std for each column
+
         self.process_data()
 
+    def __repr__(self):
+        """
+        Representation of MLData object
+        
+        """
+        return self.data.head(5)
+
     def process_data(self):
+        """
+        Process the data based on the feature set and apply transformations.
+        """
         try:
-            if self.use_lob_data:
-                print("Processing LOB data...")
-                # Ensure LOB-related columns are included in features
-                lob_columns = [col for col in self.data.columns if col.startswith('lob_')]
-                self.features.extend(lob_columns)
-            if self.log_returns:
-                self.calculate_log_returns()
-            # print(self.data)
-            self.create_lagged_features(self.lag_period)
-            self.features = [col for col in self.data.columns if col.startswith(f'min_') and self.feature_column in col]
-            self.create_lagged_features(-self.forecast_period)
-            self.target = f'fut_{self.forecast_period}_{self.feature_column}'
-            # Ensure the target column is created before splitting and standardization
-            if self.target not in self.data.columns:
-                raise ValueError(f"Target column '{self.target}' is missing in the data.")
+            if self.feature_set:
+                self.apply_feature_set(self.feature_set)
+
             self.split_data()
 
-            if self.standardised:
-                self.standardise_input(self.features + [self.target])  # Include target in standardization
+            # Apply normalization if enabled
+            if self.normalise:
+                self.normalise_input(self.features)
+                self.normalise_target()
+
         except Exception as e:
             raise RuntimeError(f"Error during data processing: {e}")
 
     def split_data(self):
         """
-        Split the data into training and testing sets based on the split_date.
+        Split the data into training and testing sets based on the train_percentage.
 
         Raises:
             ValueError: If features or target are not defined or if the resulting datasets are empty.
         """
         try:
-            if not isinstance(self.data.index, pd.DatetimeIndex):
-                self.data.index = pd.to_datetime(self.data.index)
-
-            train_data = self.data[:self.split_date]
-            test_data = self.data[self.split_date:]
+            train_size = int(len(self.data) * self.train_percentage)
+            train_data = self.data.iloc[:train_size]
+            test_data = self.data.iloc[train_size:]
 
             # Validate features and target
             if not isinstance(self.features, list) or not all(isinstance(f, str) for f in self.features):
@@ -109,72 +105,128 @@ class MLData:
         except Exception as e:
             raise RuntimeError(f"Error during data splitting: {e}")
 
-    def create_lagged_features(self, num_lags):
+    def create_lagged_features(self, input_field, num_lags=1, **kwargs):
         """
-        Create lagged features for the regression model.
+        Create lagged features for the specified input field.
 
         Args:
-            num_lags (int): Number of lagged periods to create. Positive for past lags, negative for future lags.
+            input_field (str): The column name to create lagged features for.
+            num_lags (int): Number of lagged periods to create.
+            **kwargs: Additional arguments (not used here).
         """
         try:
-            if num_lags > 0:
-                for i in range(1, num_lags + 1):
-                    self.data[f'min_{i}_{self.feature_column}'] = self.data[self.feature_column].shift(i)
-            elif num_lags < 0:
-                self.data[f'fut_{-num_lags}_{self.feature_column}'] = self.data[self.feature_column].shift(num_lags)
+            input_field = input_field[0]
+            
+            return self.data[input_field].shift(num_lags)
 
-            self.data.dropna(inplace=True)
+        except KeyError:
+            raise ValueError(f"Feature column '{input_field}' is missing in the data.")
         except Exception as e:
             raise RuntimeError(f"Error during lagged feature creation: {e}")
 
-    def standardise_input(self, columns):
+    def create_average(self, input_fields):
         """
-        Standardise the input columns by subtracting the mean and dividing by the standard deviation.
+        Calculate the average of the specified input fields.
 
         Args:
-            columns (list): List of column names to standardise.
+            input_fields (list): List of column names to calculate the average for.
+
+        Returns:
+            pd.Series: A series containing the average of the input fields.
+        """
+        try:
+            # Ensure all input fields exist in the data
+            for field in input_fields:
+                if field not in self.data.columns:
+                    raise ValueError(f"Field '{field}' is missing in the data.")
+
+            # Calculate the average across the specified fields
+            return self.data[input_fields].mean(axis=1)
+
+        except Exception as e:
+            raise RuntimeError(f"Error during average calculation: {e}")
+
+    def normalise_columns(self, columns, train_data, test_data):
+        """
+        Normalise the specified columns by subtracting the mean and dividing by the standard deviation.
+
+        Args:
+            columns (list): List of column names to normalise.
+            train_data (pd.DataFrame): Training data.
+            test_data (pd.DataFrame): Testing data.
         """
         try:
             for column in columns:
-                mu = float(self.x_train[column].mean())
-                sigma = float(self.x_train[column].std())
-                self.x_train[column] = (self.x_train[column] - mu) / sigma
-                self.x_test[column] = (self.x_test[column] - mu) / sigma
+                if column not in self.normalisation_params:
+                    mu = float(train_data[column].mean())
+                    sigma = float(train_data[column].std())
+                    self.normalisation_params[column] = {"mean": mu, "std": sigma}
+                else:
+                    mu = self.normalisation_params[column]["mean"]
+                    sigma = self.normalisation_params[column]["std"]
+
+                train_data[column] = (train_data[column] - mu) / sigma
+                test_data[column] = (test_data[column] - mu) / sigma
         except Exception as e:
-            raise RuntimeError(f"Error during input standardisation: {e}")
+            raise RuntimeError(f"Error during column normalisation: {e}")
 
-    def calculate_log_returns(self):
+    def apply_normalisation_to_series(self, series, column_name):
         """
-        Calculate log returns for the feature column.
+        Apply stored normalisation parameters to a new series.
 
-        Raises:
-            ValueError: If the feature column is not available in the data.
+        Args:
+            series (pd.Series): The series to normalise.
+            column_name (str): The name of the column to retrieve normalisation parameters for.
+
+        Returns:
+            pd.Series: The normalised series.
+        """
+        if column_name not in self.normalisation_params:
+            raise ValueError(f"No normalisation parameters found for column '{column_name}'.")
+        params = self.normalisation_params[column_name]
+        return (series - params["mean"]) / params["std"]
+
+    def normalise_input(self, columns):
+        """
+        Normalise the input columns (features and target) by calling `normalise_columns`.
+
+        Args:
+            columns (list): List of column names to normalise.
+        """
+        self.normalise_columns(columns, self.x_train, self.x_test)
+
+    def normalise_target(self):
+        """
+        Normalise the target column by calling `normalise_columns`.
+        """
+        if self.target:
+            self.normalise_columns([self.target], self.y_train, self.y_test)
+
+    def calculate_log_returns(self, input_field, **kwargs):
+        """
+        Calculate log returns for the specified input field.
+
+        Args:
+            input_field (str): The column name to calculate log returns for.
         """
         try:
-            if self.feature_column in self.data.columns:
-                self.data['log_returns'] = np.log(self.data[self.feature_column] / self.data[self.feature_column].shift(1))
+            if input_field in self.data.columns:
+                self.data[f'{input_field}_log_returns'] = np.log(self.data[input_field] / self.data[input_field].shift(1))
                 self.data.dropna(inplace=True)
-                self.feature_column = 'log_returns'
             else:
-                raise ValueError(f"{self.feature_column} is not available in the data.")
+                raise ValueError(f"{input_field} is not available in the data.")
         except Exception as e:
             raise RuntimeError(f"Error during log return calculation: {e}")
 
     # Getters
-    def get_feature_column(self):
-        return self.feature_column
+    # def get_feature_column(self):
+    #     return self.feature_column
 
-    def get_split_date(self):
-        return self.split_date
+    # def get_split_date(self):
+    #     return self.split_date
 
-    def get_lag_period(self):
-        return self.lag_period
-
-    def get_forecast_period(self):
-        return self.forecast_period
-
-    def get_features(self):
-        return self.features
+    # def get_features(self):
+    #     return self.features
 
     def get_target(self):
         return self.target
@@ -182,8 +234,8 @@ class MLData:
     def get_log_returns(self):
         return self.log_returns
 
-    def get_standardised(self):
-        return self.standardised
+    def get_normalise(self):
+        return self.normalise
 
     def get_data(self):
         """
@@ -199,43 +251,45 @@ class MLData:
             'y_test': self.y_test
         }
 
-    # Setters with error checking
-    def set_feature_column(self, feature_column):
-        if not isinstance(feature_column, str):
-            raise TypeError("Feature column must be a string.")
-        self.feature_column = feature_column
-        self.process_data()
+    def get_normalisation_params(self, feature_name):
+        """
+        Get the normalisation parameters (mean and std) for a specific feature.
 
-    def set_split_date(self, split_date):
-        try:
-            self.split_date = pd.to_datetime(split_date)
-        except Exception:
-            raise ValueError("Split date must be a valid date string.")
-        self.process_data()
+        Args:
+            feature_name (str): The name of the feature.
 
-    def set_lag_period(self, lag_period):
-        if not isinstance(lag_period, int) or lag_period < 0:
-            raise ValueError("Lag period must be a non-negative integer.")
-        self.lag_period = lag_period
-        self.process_data()
+        Returns:
+            dict: A dictionary containing 'mean' and 'std' for the feature.
+        """
+        if feature_name not in self.normalisation_params:
+            raise ValueError(f"No normalisation parameters found for feature '{feature_name}'.")
+        return self.normalisation_params[feature_name]
 
-    def set_forecast_period(self, forecast_period):
-        if not isinstance(forecast_period, int) or forecast_period < 0:
-            raise ValueError("Forecast period must be a non-negative integer.")
-        self.forecast_period = forecast_period
-        self.process_data()
+    # # Setters with error checking
+    # def set_feature_column(self, feature_column):
+    #     if not isinstance(feature_column, str):
+    #         raise TypeError("Feature column must be a string.")
+    #     self.feature_column = feature_column
+    #     self.process_data()
 
-    def set_features(self, features):
-        if not isinstance(features, list) or not all(isinstance(f, str) for f in features):
-            raise TypeError("Features must be a list of strings.")
-        self.features = features
-        self.process_data()
+    # def set_split_date(self, split_date):
+    #     try:
+    #         self.split_date = pd.to_datetime(split_date)
+    #     except Exception:
+    #         raise ValueError("Split date must be a valid date string.")
+    #     self.process_data()
 
-    def set_target(self, target):
-        if not isinstance(target, str):
-            raise TypeError("Target must be a string.")
-        self.target = target
-        self.process_data()
+    # def set_features(self, features):
+    #     if not isinstance(features, list) or not all(isinstance(f, str) for f in features):
+    #         raise TypeError("Features must be a list of strings.")
+    #     self.features = features
+    #     self.process_data()
+
+    # def set_target(self, target):
+    #     if not isinstance(target, str):
+    #         raise TypeError("Target must be a string.")
+    #     self.target = target
+    #     self.process_data()
 
     def set_log_returns(self, log_returns):
         if not isinstance(log_returns, bool):
@@ -243,8 +297,123 @@ class MLData:
         self.log_returns = log_returns
         self.process_data()
 
-    def set_standardised(self, standardised):
-        if not isinstance(standardised, bool):
-            raise TypeError("Standardised must be a boolean.")
-        self.standardised = standardised
+    def set_normalise(self, normalise):
+        if not isinstance(normalise, bool):
+            raise TypeError("normalise must be a boolean.")
+        self.normalise = normalise
+        self.process_data()
+
+    def raw_data(self, input_field):
+        """
+        Return the input field unchanged.
+
+        Args:
+            input_field (str): The column name to return unchanged.
+            **kwargs: Additional arguments (not used here).
+
+        Returns:
+            pd.Series: The unchanged column.
+        """
+        if (input_field[0] not in self.data.columns):
+            raise ValueError(f"Field '{input_field[0]}' is missing in the data.")
+        return self.data[input_field[0]]
+
+    def apply_feature_set(self, feature_set):
+        """
+        Apply a predefined feature set to the data.
+
+        Args:
+            feature_set (dict): Feature set configuration containing feature definitions.
+        """
+        try:
+            # feature_set = self.load_feature_set()
+
+            for feature in feature_set.get("features", []):
+                name = feature["name"]
+                input_data_fields = feature["input_data_fields"]
+                function = feature["function"]
+                function_parameters = feature.get("function_parameters", {})
+
+                # Ensure input_data_fields is a list and process each field
+                if not isinstance(input_data_fields, list):
+                    raise ValueError(f"input_data_fields for feature '{name}' must be a list.")
+
+                for field in input_data_fields:
+                    if field not in self.data.columns:
+                        raise ValueError(f"Field '{field}' is missing in the data.")
+
+                # Dynamically call the corresponding method
+                # print(f"Processing feature: {name}, fields: {input_data_fields}, function: {function}, params: {function_parameters}")
+                method = getattr(self, function, None)
+                if not method:
+                    raise ValueError(f"Unsupported function '{function}' in feature set. Ensure it is implemented in MLData.")
+
+                # Pass the list of fields as arguments to the method
+                if function_parameters:
+                    self.data[name] = method(input_data_fields, **function_parameters)
+                else:
+                    self.data[name] = method(input_data_fields)
+                # print(f"Feature '{name}' created successfully.")
+
+                self.features.append(name)
+
+            target = feature_set.get("target", {})
+            if target:
+                name = "target"
+                input_data_fields = target["input_data_fields"]
+                function = target["function"]
+                function_parameters = target.get("function_parameters", {})
+
+                # Ensure input_data_fields is a list and process each field
+                if not isinstance(input_data_fields, list):
+                    raise ValueError(f"input_data_fields for '{name}' must be a list.")
+
+                for field in input_data_fields:
+                    if field not in self.data.columns:
+                        raise ValueError(f"Field '{field}' is missing in the data.")
+
+                # Dynamically call the corresponding method
+                # print(f"Processing target: fields: {input_data_fields}, function: {function}, params: {function_parameters}")
+                method = getattr(self, function, None)
+                if not method:
+                    raise ValueError(f"Unsupported function '{function}' in target configuration. Ensure it is implemented in MLData.")
+
+                # Pass the list of fields as arguments to the method
+                self.data[name] = method(input_data_fields, **function_parameters)
+                self.target = name
+                # print(f"Target '{name}' created successfully.")
+
+            self.data.dropna(inplace=True)
+        except Exception as e:
+            raise RuntimeError(f"Error applying feature set: {e}")
+
+    # def load_feature_set(self):
+    #     with open(FEATURE_SETS_FILE, "r") as file:
+    #         feature_set_dictionary = json.load(file)
+    
+    #     feature_set = feature_set_dictionary.get(self.feature_set_name, {})
+    #     return feature_set
+
+    def get_feature_set(self):
+        """
+        Get the current feature set or feature set name.
+
+        Returns:
+            dict or str: The feature set dictionary if set, otherwise the feature set name.
+        """
+        return self.feature_set if self.feature_set else self.feature_set_name
+
+    def set_feature_set(self, feature_set=None, feature_set_name=None):
+        """
+        Set the feature set directly or by name.
+
+        Args:
+            feature_set (dict): The feature set dictionary to apply.
+            feature_set_name (str): The name of the feature set to load.
+        """
+        if feature_set and feature_set_name:
+            self.feature_set = feature_set
+            self.feature_set_name = feature_set_name
+        else:
+            raise ValueError("Either feature_set or feature_set_name must be provided.")
         self.process_data()

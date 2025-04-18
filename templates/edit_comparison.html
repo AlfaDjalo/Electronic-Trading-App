@@ -18,12 +18,18 @@
         </select>
     </div>
     <div class="form-group">
-        <label for="lag_period">Lag Period</label>
-        <input type="number" class="form-control" id="lag_period" name="lag_period" min="0" value="{{ comparison.lag_period or DEFAULT_LAG_PERIOD }}">
+        <label for="feature_set">Feature Set</label>
+        <select class="form-control" id="feature_set" name="feature_set">
+            {% for name, feature_set in feature_sets.items() %}
+                {% if feature_set.data_type == data_type %}
+                <option value="{{ name }}" {% if name == comparison.feature_set %}selected{% endif %}>{{ name }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
     </div>
     <div class="form-group">
-        <label for="forecast_period">Forecast Period</label>
-        <input type="number" class="form-control" id="forecast_period" name="forecast_period" min="0" value="{{ comparison.forecast_period or DEFAULT_FORECAST_PERIOD }}">
+        <label for="normalise">Normalise</label>
+        <input type="checkbox" id="normalise" name="normalise" {% if comparison.normalise %}checked{% endif %}>
     </div>
     <button type="submit" class="btn btn-primary">Save Changes</button>
     <button type="submit" name="cancel" class="btn btn-secondary">Cancel</button>

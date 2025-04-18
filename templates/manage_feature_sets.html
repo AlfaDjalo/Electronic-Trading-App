@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Feature Sets{% endblock %}
+
+{% block content %}
+<h3>Manage Feature Sets</h3>
+
+<form method="post">
+    <div class="form-group">
+        <label for="feature_set">Select Feature Set:</label>
+        <select class="form-control" id="feature_set" name="feature_set" onchange="this.form.submit()">
+            {% for name in feature_set_names %}
+            <option value="{{ name }}" {% if name == selected_feature_set %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+            <option value="add_new">Add New Feature Set</option>
+        </select>
+    </div>
+
+    {% if selected_feature_set %}
+    <h4>Features</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Input Data Fields</th>
+                <th>Function</th>
+                <th>Function Parameters</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for feature in features %}
+            <tr>
+                <td>
+                    <input type="text" class="form-control" name="features[{{ loop.index0 }}][name]" value="{{ feature.name }}">
+                </td>
+                <td>
+                    <input type="text" class="form-control" name="features[{{ loop.index0 }}][input_data_fields]" value="{{ feature.input_data_fields | join(', ') }}">
+                </td>
+                <td>
+                    <input type="text" class="form-control" name="features[{{ loop.index0 }}][function]" value="{{ feature.function }}">
+                </td>
+                <td>
+                    <textarea class="form-control" name="features[{{ loop.index0 }}][function_parameters]" rows="2">{{ feature.function_parameters | tojson }}</textarea>
+                </td>
+                <td>
+                    <button type="submit" class="btn btn-danger btn-sm" name="action" value="delete_feature_{{ loop.index0 }}">Delete</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary" name="action" value="add_feature">Add Feature</button>
+    {% endif %}
+
+    {% if target %}
+    <h4>Target</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Input Data Fields</th>
+                <th>Function</th>
+                <th>Function Parameters</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <input type="text" class="form-control" name="target[input_data_fields]" value="{{ target.input_data_fields | join(', ') }}">
+                </td>
+                <td>
+                    <input type="text" class="form-control" name="target[function]" value="{{ target.function }}">
+                </td>
+                <td>
+                    <textarea class="form-control" name="target[function_parameters]" rows="2">{{ target.function_parameters | tojson }}</textarea>
+                </td>
+                <td>
+                    <button type="submit" class="btn btn-danger btn-sm" name="action" value="delete_target">Delete</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    {% else %}
+    <button type="submit" class="btn btn-primary mt-2" name="action" value="create_target">Create Target</button>
+    {% endif %}
+
+    <hr>
+    <button type="submit" class="btn btn-success" name="action" value="save">Save Feature Set</button>
+    <button type="submit" class="btn btn-danger" name="action" value="delete_set" onclick="return confirm('Are you sure you want to delete this feature set?');">Delete Feature Set</button>
+</form>
+{% endblock %}

@@ -1,0 +1,37 @@
+{
+    "daily": {
+        "fields": [
+            "open",
+            "high",
+            "low",
+            "close",
+            "adj_close",
+            "volume"
+        ]
+    },
+    "intraday": {
+        "fields": [
+            "bid_price_0",
+            "bid_price_1",
+            "bid_price_2",
+            "bid_price_3",
+            "bid_price_4",
+            "ask_price_0",
+            "ask_price_1",
+            "ask_price_2",
+            "ask_price_3",
+            "ask_price_4",
+            "bid_volume_0",
+            "bid_volume_1",
+            "bid_volume_2",
+            "bid_volume_3",
+            "bid_volume_4",
+            "ask_volume_0",
+            "ask_volume_1",
+            "ask_volume_2",
+            "ask_volume_3",
+            "ask_volume_4",
+            "mid_price"
+        ]
+    }
+}

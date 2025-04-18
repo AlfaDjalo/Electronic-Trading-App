@@ -1,0 +1,28 @@
+{
+    "Daily data historical": {
+        "data_type": "daily",
+        "features": [
+            {
+                "name": "Close",
+                "input_data_fields": "[Close]",
+                "function": "raw_data"
+            },
+            {
+                "name": "Close_lagged_1",
+                "input_data_fields": "[Close]",
+                "function": "create_lagged_features",
+                "function_parameters": {
+                    "num_lags": 1
+                }
+            },
+            {
+                "name": "Close_lagged_2",
+                "input_data_fields": "[Close]",
+                "function": "create_lagged_features",
+                "function_parameters": {
+                    "num_lags": 2
+                }
+            }
+        ]
+    }
+}
