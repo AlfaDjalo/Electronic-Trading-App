@@ -458,7 +458,6 @@ def setup_routes(app):
                 'error_chart': error_chart_path
             }
 
-        # ...existing code...
         # Store results in the session for rendering on the comparison_results page
         session['comparison_results'] = {
             'results': results,
@@ -498,65 +497,6 @@ def setup_routes(app):
         """
         return send_from_directory(TEMP_CHART_DIR, filename)
 
-    # @app.route('/detailed_results/<int:index>')
-    # def detailed_results(index):
-    #     """
-    #     Display detailed results for a specific comparison.
-
-    #     Args:
-    #         index (int): Index of the comparison to display.
-
-    #     Returns:
-    #         Response: Rendered HTML template with detailed results.
-    #     """
-    #     comparisons = session.get('comparisons', [])
-    #     if index >= len(comparisons):
-    #         return "Comparison not found", 404
-
-    #     comparison = comparisons[index]
-    #     ticker = session.get('ticker')
-    #     start_date = session.get('start_date')
-    #     end_date = session.get('end_date')
-    #     model = comparison['model']
-    #     params = comparison.get('params', {})
-    #     # lag_period = int(params.get('num_days_lag', {}).get('value', DEFAULT_LAG_PERIOD))
-    #     # forecast_period = int(params.get('forward_projection_days', {}).get('value', DEFAULT_FORECAST_PERIOD))
-
-    #     try:
-    #         # ...existing code...
-    #         # Use StockData for raw data and MLData for model data
-    #         stock_data = StockData(ticker, start_date, end_date, load_data=True)
-    #         ml_data = MLData(
-    #             raw_data=stock_data.get_data(),
-    #             # lag_period=lag_period,
-    #             # forecast_period=forecast_period,
-    #             # features=[],  # Features will be dynamically created
-    #             # target=[],  # Target will be dynamically created
-    #             # log_returns=comparison.get('use_log_returns', False),
-    #             # normalised=params.get('normalise', {}).get('value', False)
-    #         )
-
-    #         model_handler = ModelHandler(ml_data.get_data(), params)
-
-    #         if model == 'LinearRegression':
-    #             model_handler.regression()
-    #         elif model == 'RNN':
-    #             model_handler.ML(model_handler.simpleRNN_)
-    #         elif model == 'LSTM':
-    #             model_handler.ML(model_handler.lstm_)
-    #         else:
-    #             return "Model not implemented", 400
-
-    #         y_pred = model_handler.model.predict(ml_data.get_data()['x_test'])
-    #         x_test_index = ml_data.get_data()['x_test'].index
-    #         prediction_chart_url = create_prediction_chart(x_test_index, ml_data.get_data()['y_test'].values.flatten(), {model: y_pred})
-    #         error = np.abs(ml_data.get_data()['y_test'].values.flatten() - y_pred.flatten())
-    #         error_chart_url = create_error_chart(x_test_index, {model: error})
-
-    #         return render_template('detailed_results.html', comparison=comparison, prediction_chart_url=prediction_chart_url, error_chart_url=error_chart_url)
-
-    #     except Exception as e:
-    #         return f"Error generating detailed results: {str(e)}", 500
 
     @app.route('/test_stock_data/<int:index>', methods=['GET', 'POST'])
     def test_stock_data(index):
@@ -583,14 +523,12 @@ def setup_routes(app):
         normalise = comparison.get('normalise', {})
         # use_lob_data = session.get('use_lob_data', False)  # Retrieve LOB data flag from session
         data_type = session.get('data_type')
-        # ...existing code...
         # Check if processed data is cached
         cache_key = f"processed_data_{index}"
         processed_data = cache.get(cache_key)
 
         if not processed_data:
             try:
-                # ...existing code...
                 # Create StockData object
                 stock_data = StockData(
                     data_type,
@@ -608,13 +546,11 @@ def setup_routes(app):
                 #     use_lob_data=use_lob_data
                 # )
 
-                # ...existing code...
                 # Select the appropriate data type
                 raw_data = stock_data.get_data()
                 feature_set_name = comparison.get('feature_set_name')
                 feature_set = feature_set_manager.get_feature_set(feature_set_name)
 
-                # ...existing code...
                 # Create MLData object
                 ml_data = MLData(
                     raw_data=raw_data,
@@ -626,7 +562,6 @@ def setup_routes(app):
                     feature_set=feature_set  # Pass feature_set
                 )
 
-                # ...existing code...
                 # Convert data to JSON-serializable format
                 processed_data = {
                     'raw': raw_data.reset_index().to_dict(orient='records'),
@@ -636,7 +571,6 @@ def setup_routes(app):
                     'y_test': ml_data.get_data()['y_test'].reset_index().to_dict(orient='records') if ml_data.get_data()['y_test'] is not None else []
                 }
 
-                # ...existing code...
                 # Cache the processed data
                 cache.set(cache_key, processed_data, timeout=300)  # Cache for 5 minutes
             except Exception as e:
@@ -648,11 +582,9 @@ def setup_routes(app):
         selected_data_type = request.args.get('data_type', data_types[0])  # Default to the first item
 
         try:
-            # ...existing code...
             # Retrieve processed data from the cache
             data = pd.DataFrame(processed_data[selected_data_type])
 
-            # ...existing code...
             # Get the first and last five rows
             data_preview = {
                 'head': data.head(5),
@@ -702,7 +634,13 @@ def setup_routes(app):
             features = fs.get("features", [])
             target = fs.get("target", None)
 
-        for feature in features:
+        # Store temporary changes in the session
+        if 'temp_feature_set' not in session:
+            session['temp_feature_set'] = {}
+
+        temp_feature_set = session['temp_feature_set'].get(selected_feature_set, {"features": features, "target": target})
+
+        for feature in temp_feature_set["features"]:
             if 'function_parameters' not in feature:
                 feature['function_parameters'] = None
 
@@ -713,378 +651,102 @@ def setup_routes(app):
             action = request.form.get('action')
             if action:
                 if action == 'create_target':
-                    target = {
+                    temp_feature_set["target"] = {
                         "name": "target",
                         "input_data_fields": [],
                         "function": "raw_data",
                         "function_parameters": None
                     }
-                    if selected_feature_set:
-                        feature_set_manager.update_feature_set(selected_feature_set, {"target": target})
 
                 elif action == 'delete_target':
-                    target = None
-                    if selected_feature_set:
-                        feature_set_manager.update_feature_set(selected_feature_set, {"target": None})
+                    temp_feature_set["target"] = None
 
                 elif action == 'add_feature':
-                    features.append({
-                        "name": "new_feature",
-                        "input_data_fields": [],
-                        "function": "raw_data",
-                        "function_parameters": None
-                    })
-                    if selected_feature_set:
-                        feature_set_manager.update_feature_set(selected_feature_set, {"features": features})
-                    return redirect(url_for('manage_feature_sets'))
+                    input_data_fields = request.form.getlist('data_fields')  # Get selected input fields
+                    function = request.form.get('function')  # Get selected function
+                    try:
+                        function_parameters = json.loads(request.form.get('function_parameters', '{}'))  # Parse JSON parameters
+                    except json.JSONDecodeError:
+                        function_parameters = {}
+
+                    # Generate the feature name based on the function
+                    if function == 'raw_data':
+                        if len(input_data_fields) != 1:
+                            return "raw_data function requires exactly one input field.", 400
+                        feature_name = input_data_fields[0]
+                    elif function == 'create_lagged_features':
+                        if len(input_data_fields) != 1:
+                            return "create_lagged_features function requires exactly one input field.", 400
+                        num_lags = function_parameters.get("num_lags", 1)
+                        feature_name = f"{input_data_fields[0]}_lagged_{num_lags}"
+                    elif function == 'average':
+                        if len(input_data_fields) < 2:
+                            return "average function requires at least two input fields.", 400
+                        feature_name = f"avg_{'_'.join(input_data_fields)}"
+                    else:
+                        return f"Unsupported function: {function}", 400
+
+                    # Create the new feature dictionary
+                    new_feature = {
+                        "name": feature_name,
+                        "input_data_fields": input_data_fields,
+                        "function": function,
+                        "function_parameters": function_parameters
+                    }
+
+                    # Add the new feature to the temporary feature set
+                    temp_feature_set["features"].append(new_feature)
 
                 elif action.startswith("delete_feature_"):
                     try:
                         index = int(action.split("_")[-1])
-                        if 0 <= index < len(features):
-                            del features[index]
-                            if selected_feature_set:
-                                feature_set_manager.update_feature_set(selected_feature_set, {"features": features})
+                        if 0 <= index < len(temp_feature_set["features"]):
+                            del temp_feature_set["features"][index]
                     except Exception as e:
                         print("Error deleting feature:", e)
-                    return redirect(url_for('manage_feature_sets'))
 
                 elif action == 'save':
-                    features = []
-                    i = 0
-                    while f"features[{i}][name]" in request.form:
-                        try:
-                            params = json.loads(request.form.get(f"features[{i}][function_parameters]", "null"))
-                        except json.JSONDecodeError:
-                            params = None
-
-                        feature = {
-                            "name": request.form.get(f"features[{i}][name]"),
-                            "input_data_fields": [s.strip() for s in request.form.get(f"features[{i}][input_data_fields]", "").split(",") if s.strip()],
-                            "function": request.form.get(f"features[{i}][function]"),
-                            "function_parameters": params,
-                        }
-                        features.append(feature)
-                        i += 1
-
-                    if target:
-                        try:
-                            target["input_data_fields"] = [s.strip() for s in request.form.get("target[input_data_fields]", "").split(",") if s.strip()]
-                            target["function"] = request.form.get("target[function]")
-                            target["function_parameters"] = json.loads(request.form.get("target[function_parameters]", "null"))
-                        except json.JSONDecodeError:
-                            target["function_parameters"] = None
-
+                    # Save the temporary feature set to the JSON file
                     if selected_feature_set:
-                        feature_set_manager.update_feature_set(selected_feature_set, {"features": features, "target": target})
-
+                        feature_set_manager.update_feature_set(selected_feature_set, temp_feature_set)
+                    session['temp_feature_set'].pop(selected_feature_set, None)  # Clear temporary changes after saving
                     return redirect(url_for('manage_feature_sets'))
 
                 elif action == 'delete_set':
                     if selected_feature_set:
                         feature_set_manager.delete_feature_set(selected_feature_set)
                         session.pop('selected_feature_set', None)
+                    session['temp_feature_set'].pop(selected_feature_set, None)  # Clear temporary changes
                     return redirect(url_for('manage_feature_sets'))
+
+                elif action == 'cancel':
+                    # Revert temporary changes by reloading the feature set from the JSON file
+                    session['temp_feature_set'].pop(selected_feature_set, None)
+                    return redirect(url_for('manage_feature_sets'))
+
+            # Update the session with the temporary changes
+            session['temp_feature_set'][selected_feature_set] = temp_feature_set
 
         return render_template(
             'manage_feature_sets.html',
             feature_set_names=feature_set_names,
             selected_feature_set=selected_feature_set,
-            features=features,
-            target=target,
+            features=temp_feature_set["features"],
+            target=temp_feature_set["target"],
             available_data_fields=available_data_fields
         )
-
-
-
-    # @app.route('/manage_feature_sets', methods=['GET', 'POST'])
-    # def manage_feature_sets():
-
-    #     # stock_data = StockData(
-    #     #     session.get('ticker', ''), 
-    #     #     session.get('start_date', DEFAULT_START_DATE), 
-    #     #     session.get('end_date', DEFAULT_END_DATE), 
-    #     #     load_data=False
-    #     # )
-    #     data_type = session.get('data_type')
-    #     feature_set_names = feature_set_manager.get_feature_sets_by_data_type(data_type)
-
-    #     # feature_set_name = comparison.get('feature_set_name')
-    #     # feature_set = feature_set_manager.get_feature_set(feature_set_name)
-    #     # feature_sets = {
-    #     #     name: fs for name, fs in feature_set_manager.feature_set_dictionary.items()
-    #     #     if fs.get("data_type") == data_type
-    #     # }  # Filter feature sets by data_type
-
-    #     selected_feature_set = request.form.get('feature_set') or session.get('selected_feature_set') or next(iter(feature_set_names), None)
-        
-    #     if selected_feature_set == 'add_new':
-    #         selected_feature_set = None
-    #         features = []  # Initialize an empty features list for new feature sets
-    #         target = None  # Initialize target for new feature sets
-    #     else:
-    #         session['selected_feature_set'] = selected_feature_set  # Save the selected feature set to the session
-    #         features = feature_set_manager.get_feature_set(selected_feature_set).get("features", []) if selected_feature_set else []
-    #         target = feature_set_manager.get_feature_set(selected_feature_set).get("target", None)
-
-    #     # Ensure all features have 'function_parameters' defined
-    #     for feature in features:
-    #         if 'function_parameters' not in feature:
-    #             feature['function_parameters'] = None
-
-    #     # Load available fields using the helper function
-    #     available_fields_data = load_available_fields()
-    #     available_data_fields = available_fields_data.get(data_type, {}).get("fields", [])
-
-    #     if request.method == 'POST':
-    #         action = request.form.get('action')
-    #         print("action: ", action)
-    #         if action == 'create_target':
-    #             target = {
-    #                 "name": "target",
-    #                 "input_data_fields": [],
-    #                 "function": "raw_data",
-    #                 "function_parameters": None
-    #             }
-    #             if selected_feature_set:
-    #                 feature_set_manager.update_feature_set(selected_feature_set, {"target": target})
-    #         elif action == 'delete_target':
-    #             target = None
-    #             if selected_feature_set:
-    #                 feature_set_manager.delete_feature_set(selected_feature_set, {"target": target})
-    #         elif action == 'save':
-    #             # Update features and target with submitted data
-    #             updated_features = request.form.getlist('features')
-    #             features = []
-    #             for feature_data in updated_features:
-    #                 feature = {
-    #                     "name": feature_data.get("name"),
-    #                     "input_data_fields": feature_data.get("input_data_fields", "").split(","),
-    #                     "function": feature_data.get("function"),
-    #                     "function_parameters": json.loads(feature_data.get("function_parameters", "null"))
-    #                 }
-    #                 features.append(feature)
-    #             if target:
-    #                 target["input_data_fields"] = request.form.get("target[input_data_fields]", "").split(",")
-    #                 target["function"] = request.form.get("target[function]")
-    #                 target["function_parameters"] = json.loads(request.form.get("target[function_parameters]", "null"))
-    #             if selected_feature_set:
-    #                 feature_set_manager.update_feature_set(selected_feature_set, {"features": features, "target": target})
-    #             return redirect(url_for('manage_feature_sets'))
-    #         elif action == 'delete_set':
-    #             print("Deleting feature set")
-    #             if selected_feature_set:
-    #                 feature_set_manager.delete_feature_set(selected_feature_set)
-    #                 session.pop('selected_feature_set', None)  # Remove the deleted set from the session
-    #                 return redirect(url_for('manage_feature_sets'))  # Redirect after deletion
-    #         # ...existing code for other actions...
-
-    #     return render_template(
-    #         'manage_feature_sets.html',
-    #         feature_set_names=feature_set_names,  # Pass filtered feature sets
-    #         selected_feature_set=selected_feature_set,
-    #         features=features,
-    #         target=target,  # Pass target to the template
-    #         available_data_fields=available_data_fields  # Pass dynamically fetched fields
-    #     )
 
     @app.route('/add_feature_set', methods=['GET', 'POST'])
     def add_feature_set():
         print("In add_feature_set")
         if request.method == 'POST':
             feature_set_name = request.form.get('feature_set_name')
-            # features = 
-
-    # @app.route('/manage_feature_sets', methods=['GET', 'POST'])
-    # def manage_feature_sets():
-
-    #     # stock_data = StockData(
-    #     #     session.get('ticker', ''), 
-    #     #     session.get('start_date', DEFAULT_START_DATE), 
-    #     #     session.get('end_date', DEFAULT_END_DATE), 
-    #     #     load_data=False
-    #     # )
-    #     data_type = session.get('data_type')
-    #     feature_set_names = feature_set_manager.get_feature_sets_by_data_type(data_type)
-
-    #     # feature_set_name = comparison.get('feature_set_name')
-    #     # feature_set = feature_set_manager.get_feature_set(feature_set_name)
-    #     # feature_sets = {
-    #     #     name: fs for name, fs in feature_set_manager.feature_set_dictionary.items()
-    #     #     if fs.get("data_type") == data_type
-    #     # }  # Filter feature sets by data_type
-
-    #     selected_feature_set = request.form.get('feature_set') or session.get('selected_feature_set') or next(iter(feature_set_names), None)
-        
-    #     if selected_feature_set == 'add_new':
-    #         selected_feature_set = None
-    #         features = []  # Initialize an empty features list for new feature sets
-    #         target = None  # Initialize target for new feature sets
-    #     else:
-    #         session['selected_feature_set'] = selected_feature_set  # Save the selected feature set to the session
-    #         features = feature_set_manager.get_feature_set(selected_feature_set).get("features", []) if selected_feature_set else []
-    #         target = feature_set_manager.get_feature_set(selected_feature_set).get("target", None)
-
-    #     # Ensure all features have 'function_parameters' defined
-    #     for feature in features:
-    #         if 'function_parameters' not in feature:
-    #             feature['function_parameters'] = None
-
-    #     # Load available fields using the helper function
-    #     available_fields_data = load_available_fields()
-    #     available_data_fields = available_fields_data.get(data_type, {}).get("fields", [])
-
-    #     if request.method == 'POST':
-    #         action = request.form.get('action')
-    #         print("action: ", action)
-    #         if action == 'create_target':
-    #             target = {
-    #                 "name": "target",
-    #                 "input_data_fields": [],
-    #                 "function": "raw_data",
-    #                 "function_parameters": None
-    #             }
-    #             if selected_feature_set:
-    #                 feature_set_manager.update_feature_set(selected_feature_set, {"target": target})
-    #         elif action == 'delete_target':
-    #             target = None
-    #             if selected_feature_set:
-    #                 feature_set_manager.delete_feature_set(selected_feature_set, {"target": target})
-    #         elif action == 'save':
-    #             # Update features and target with submitted data
-    #             updated_features = request.form.getlist('features')
-    #             features = []
-    #             for feature_data in updated_features:
-    #                 feature = {
-    #                     "name": feature_data.get("name"),
-    #                     "input_data_fields": feature_data.get("input_data_fields", "").split(","),
-    #                     "function": feature_data.get("function"),
-    #                     "function_parameters": json.loads(feature_data.get("function_parameters", "null"))
-    #                 }
-    #                 features.append(feature)
-    #             if target:
-    #                 target["input_data_fields"] = request.form.get("target[input_data_fields]", "").split(",")
-    #                 target["function"] = request.form.get("target[function]")
-    #                 target["function_parameters"] = json.loads(request.form.get("target[function_parameters]", "null"))
-    #             if selected_feature_set:
-    #                 feature_set_manager.update_feature_set(selected_feature_set, {"features": features, "target": target})
-    #             return redirect(url_for('manage_feature_sets'))
-    #         elif action == 'delete_set':
-    #             print("Deleting feature set")
-    #             if selected_feature_set:
-    #                 feature_set_manager.delete_feature_set(selected_feature_set)
-    #                 session.pop('selected_feature_set', None)  # Remove the deleted set from the session
-    #                 return redirect(url_for('manage_feature_sets'))  # Redirect after deletion
-    #         # ...existing code for other actions...
-
-    #     return render_template(
-    #         'manage_feature_sets.html',
-    #         feature_set_names=feature_set_names,  # Pass filtered feature sets
-    #         selected_feature_set=selected_feature_set,
-    #         features=features,
-    #         target=target,  # Pass target to the template
-    #         available_data_fields=available_data_fields  # Pass dynamically fetched fields
-    #     )
 
             request.form.getlist('features')
             feature_set_data = {feature: {} for feature in features}
             feature_set_manager.add_feature_set(feature_set_name, feature_set_data)
             return redirect(url_for('manage_feature_sets'))
         
-
-    # @app.route('/manage_feature_sets', methods=['GET', 'POST'])
-    # def manage_feature_sets():
-
-    #     # stock_data = StockData(
-    #     #     session.get('ticker', ''), 
-    #     #     session.get('start_date', DEFAULT_START_DATE), 
-    #     #     session.get('end_date', DEFAULT_END_DATE), 
-    #     #     load_data=False
-    #     # )
-    #     data_type = session.get('data_type')
-    #     feature_set_names = feature_set_manager.get_feature_sets_by_data_type(data_type)
-
-    #     # feature_set_name = comparison.get('feature_set_name')
-    #     # feature_set = feature_set_manager.get_feature_set(feature_set_name)
-    #     # feature_sets = {
-    #     #     name: fs for name, fs in feature_set_manager.feature_set_dictionary.items()
-    #     #     if fs.get("data_type") == data_type
-    #     # }  # Filter feature sets by data_type
-
-    #     selected_feature_set = request.form.get('feature_set') or session.get('selected_feature_set') or next(iter(feature_set_names), None)
-        
-    #     if selected_feature_set == 'add_new':
-    #         selected_feature_set = None
-    #         features = []  # Initialize an empty features list for new feature sets
-    #         target = None  # Initialize target for new feature sets
-    #     else:
-    #         session['selected_feature_set'] = selected_feature_set  # Save the selected feature set to the session
-    #         features = feature_set_manager.get_feature_set(selected_feature_set).get("features", []) if selected_feature_set else []
-    #         target = feature_set_manager.get_feature_set(selected_feature_set).get("target", None)
-
-    #     # Ensure all features have 'function_parameters' defined
-    #     for feature in features:
-    #         if 'function_parameters' not in feature:
-    #             feature['function_parameters'] = None
-
-    #     # Load available fields using the helper function
-    #     available_fields_data = load_available_fields()
-    #     available_data_fields = available_fields_data.get(data_type, {}).get("fields", [])
-
-    #     if request.method == 'POST':
-    #         action = request.form.get('action')
-    #         print("action: ", action)
-    #         if action == 'create_target':
-    #             target = {
-    #                 "name": "target",
-    #                 "input_data_fields": [],
-    #                 "function": "raw_data",
-    #                 "function_parameters": None
-    #             }
-    #             if selected_feature_set:
-    #                 feature_set_manager.update_feature_set(selected_feature_set, {"target": target})
-    #         elif action == 'delete_target':
-    #             target = None
-    #             if selected_feature_set:
-    #                 feature_set_manager.delete_feature_set(selected_feature_set, {"target": target})
-    #         elif action == 'save':
-    #             # Update features and target with submitted data
-    #             updated_features = request.form.getlist('features')
-    #             features = []
-    #             for feature_data in updated_features:
-    #                 feature = {
-    #                     "name": feature_data.get("name"),
-    #                     "input_data_fields": feature_data.get("input_data_fields", "").split(","),
-    #                     "function": feature_data.get("function"),
-    #                     "function_parameters": json.loads(feature_data.get("function_parameters", "null"))
-    #                 }
-    #                 features.append(feature)
-    #             if target:
-    #                 target["input_data_fields"] = request.form.get("target[input_data_fields]", "").split(",")
-    #                 target["function"] = request.form.get("target[function]")
-    #                 target["function_parameters"] = json.loads(request.form.get("target[function_parameters]", "null"))
-    #             if selected_feature_set:
-    #                 feature_set_manager.update_feature_set(selected_feature_set, {"features": features, "target": target})
-    #             return redirect(url_for('manage_feature_sets'))
-    #         elif action == 'delete_set':
-    #             print("Deleting feature set")
-    #             if selected_feature_set:
-    #                 feature_set_manager.delete_feature_set(selected_feature_set)
-    #                 session.pop('selected_feature_set', None)  # Remove the deleted set from the session
-    #                 return redirect(url_for('manage_feature_sets'))  # Redirect after deletion
-    #         # ...existing code for other actions...
-
-    #     return render_template(
-    #         'manage_feature_sets.html',
-    #         feature_set_names=feature_set_names,  # Pass filtered feature sets
-    #         selected_feature_set=selected_feature_set,
-    #         features=features,
-    #         target=target,  # Pass target to the template
-    #         available_data_fields=available_data_fields  # Pass dynamically fetched fields
-    #     )
-
-# request.form.getlist('features')
-# "Close", "Volume"]  # Example fields
         return render_template('add_feature_set.html', fields=fields)
 
     @app.route('/edit_feature_set/<feature_set_name>', methods=['GET', 'POST'])
@@ -1133,38 +795,12 @@ def setup_routes(app):
         Returns:
             Response: Rendered comparison page with updated comparisons.
         """
-        
-        # Load feature sets from the JSON file if not already in the session
-        # if 'feature_set_dictionary' not in session:
-        #     session['feature_set_dictionary'] = FeatureSetManager()
-            # try:
-            #     with open('data/feature_sets.json') as f:
-            #         session['feature_sets'] = json.load(f)
-            #     except FileNotFoundError:
-            #         session['feature_sets'] = {}
-
         comparisons = session.get("comparisons", [])
         with open('model_parameters.json') as f:
             models = list(json.load(f).keys())  # Load model names from JSON
         
         data_type = session.get('data_type', 'daily')  # Retrieve data type from session
         feature_set_names = feature_set_manager.get_feature_sets_by_data_type(data_type)
-# feature_sets = {
-#     name: fs for name, fs in session.get('feature_sets', {}).items()
-#     if fs.get("data_type") == session.get('data_type', 'daily')
-# }
-        # feature_sets = {
-        #     name: fs for name, fs in session.get('feature_sets', {}).items()
-        #     if fs.get("data_type") == session.get('data_type', 'daily')
-        # }
-        # feature_sets = {
-        #     name: fs for name, fs in session.get('feature_sets', {}).items()
-        #     if fs.get("data_type") == session.get('data_type', 'daily')
-        # }
-        # feature_sets = {
-        #     name: fs for name, fs in session.get('feature_sets', {}).items()
-        #     if fs.get("data_type") == session.get('data_type', 'daily')
-        # }
         return render_template(
             "comparison_page.html",
             comparisons=comparisons,
@@ -1230,7 +866,6 @@ def setup_routes(app):
         return jsonify({'tickers': tickers})
 
     def get_tickers_by_category(category):
-        # ...existing code...
         # Helper function to fetch tickers based on category
         tickers = []
         if (category == 'australian'):
@@ -1254,35 +889,37 @@ def create_prediction_chart(x_test_index, y_test, predictions):
     Returns:
         str: Filepath of the saved chart image.
     """
-    # ...existing code...
-    # Align lengths of y_test and x_test_index
-    min_length = min(len(x_test_index), len(y_test))
+    # Align lengths of x_test_index, y_test, and predictions
+    min_length = min(len(x_test_index), len(y_test), *[len(y_pred) for y_pred in predictions.values()])
     x_test_index = x_test_index[:min_length]
     y_test = y_test[:min_length].flatten()  # Ensure y_test is 1-dimensional
-
-    # ...existing code...
-    # Find common dates across all series
-    common_dates = set(x_test_index)
-    for y_pred in predictions.values():
-        common_dates &= set(x_test_index[:len(y_pred)])  # Ensure alignment with prediction length
-
-    # ...existing code...
-    # Reduce to common dates
-    common_dates = sorted(common_dates)
-    y_test = pd.Series(y_test, index=x_test_index).loc[common_dates]
     predictions = {
-        model: pd.Series(
-            y_pred[:min(len(y_pred), len(x_test_index))].flatten(),  # Flatten y_pred
-            index=x_test_index[:min(len(y_pred), len(x_test_index))]  # Truncate x_test_index
-        ).loc[common_dates]
+        model: y_pred[:min_length].flatten()
         for model, y_pred in predictions.items()
     }
 
-    # ...existing code...
+    # Remove duplicates from x_test_index
+    unique_index = ~pd.Series(x_test_index).duplicated(keep='first')  # Mask for unique indices
+    x_test_index = x_test_index[unique_index]
+    y_test = y_test[unique_index]
+    predictions = {
+        model: y_pred[unique_index]
+        for model, y_pred in predictions.items()
+    }
+
+    # Find common dates across all series
+    common_dates = sorted(set(x_test_index))
+    y_test = pd.Series(y_test, index=x_test_index).reindex(common_dates).dropna().values
+    predictions = {
+        model: pd.Series(y_pred, index=x_test_index).reindex(common_dates).dropna().values
+        for model, y_pred in predictions.items()
+    }
+
     # Plot the chart
     fig, ax = plt.subplots(figsize=(15, 8))
     ax.plot(common_dates, y_test, label="Actual", linestyle='dashed')
     for model_name, y_pred in predictions.items():
+        print("y_pred: ", len(y_pred))
         ax.plot(common_dates, y_pred, label=f"Predicted ({model_name})")
     ax.set_title("Predictions vs Actual Values")
     ax.set_xlabel("Date")
@@ -1302,24 +939,30 @@ def create_error_chart(x_test_index, errors):
     Returns:
         str: Filepath of the saved error chart image.
     """
-    # ...existing code...
-    # Find common dates across all series
-    common_dates = set(x_test_index)
-    for error in errors.values():
-        common_dates &= set(x_test_index[:len(error)])  # Ensure alignment with error length
+    # Align lengths of x_test_index and errors
+    min_length = min(len(x_test_index), *[len(error) for error in errors.values()])
+    x_test_index = x_test_index[:min_length]
 
-    # ...existing code...
-    # Reduce to common dates
-    common_dates = sorted(common_dates)
+    # Remove duplicates from x_test_index
+    unique_index = ~x_test_index.duplicated(keep='first')  # Mask for unique indices
+    x_test_index = x_test_index[unique_index]
+
+    # Apply the same mask to errors
     errors = {
-        model: pd.Series(
-            error[:len(common_dates)].flatten(),  # Truncate error array to match common_dates length
-            index=x_test_index[:len(common_dates)]  # Truncate x_test_index to match common_dates length
-        ).loc[common_dates]
+        model: error[:min(len(error), len(x_test_index))].flatten()
         for model, error in errors.items()
     }
 
-    # ...existing code...
+    # Find common dates across all series
+    common_dates = sorted(set(x_test_index))
+    errors = {
+        model: pd.Series(
+            error[:min(len(error), len(x_test_index))],
+            index=x_test_index[:min(len(error), len(x_test_index))]
+        ).reindex(common_dates).dropna().values  # Align errors with common_dates
+        for model, error in errors.items()
+    }
+
     # Plot the chart
     fig, ax = plt.subplots(figsize=(15, 8))
     for model_name, error in errors.items():
