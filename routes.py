@@ -15,10 +15,12 @@ from flask_caching import Cache
 from datetime import date, datetime
 from babel.numbers import format_decimal  # Add this import for number formatting
 
+# import app modules
 from models import ModelHandler
 from stock_data import StockData, DEFAULT_START_DATE, DEFAULT_END_DATE, LOB_FILEPATH  # Import LOB_FILEPATH
 from ml_data import MLData
 from feature_set import FeatureSetManager
+from charts import create_chart, TEMP_CHART_DIR # Update import to use create_chart
 
 def is_date(value):
     """Check if a value is a date or datetime."""
@@ -48,9 +50,6 @@ def intcomma(value):
 # DEFAULT_LAG_PERIOD = 3
 # DEFAULT_FORECAST_PERIOD = 1
 FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\feature_sets.json"
-
-TEMP_CHART_DIR = "temp_charts"  # Directory to store temporary chart images
-os.makedirs(TEMP_CHART_DIR, exist_ok=True)  # Ensure the directory exists
 
 def setup_routes(app):
     """
@@ -469,8 +468,8 @@ def setup_routes(app):
                 })
 
         if x_test_index is not None and y_test is not None and predictions:
-            prediction_chart_path = create_prediction_chart(x_test_index, y_test, predictions)
-            error_chart_path = create_error_chart(x_test_index, errors)
+            prediction_chart_path = create_chart(x_test_index, {"Actual": y_test, **predictions}, chart_type='prediction')
+            error_chart_path = create_chart(x_test_index, errors, chart_type='error')
             session['chart_paths'] = {
                 'prediction_chart': prediction_chart_path,
                 'error_chart': error_chart_path
@@ -899,103 +898,5 @@ def setup_routes(app):
             tickers = [{'Code': 'BTC-USD', 'Company': 'Bitcoin'}]
         return tickers
 
-def create_prediction_chart(x_test_index, y_test, predictions):
-    """
-    Generate a chart comparing actual values and multiple predicted series.
-    Ensure all time series have data for the same dates.
-
-    Returns:
-        str: Filepath of the saved chart image.
-    """
-    # Align lengths of x_test_index, y_test, and predictions
-    min_length = min(len(x_test_index), len(y_test), *[len(y_pred) for y_pred in predictions.values()])
-    x_test_index = x_test_index[:min_length]
-    y_test = y_test[:min_length].flatten()  # Ensure y_test is 1-dimensional
-    predictions = {
-        model: y_pred[:min_length].flatten()
-        for model, y_pred in predictions.items()
-    }
-
-    # Remove duplicates from x_test_index
-    unique_index = ~pd.Series(x_test_index).duplicated(keep='first')  # Mask for unique indices
-    x_test_index = x_test_index[unique_index]
-    y_test = y_test[unique_index]
-    predictions = {
-        model: y_pred[unique_index]
-        for model, y_pred in predictions.items()
-    }
-
-    # Find common dates across all series
-    common_dates = sorted(set(x_test_index))
-    y_test = pd.Series(y_test, index=x_test_index).reindex(common_dates).dropna().values
-    predictions = {
-        model: pd.Series(y_pred, index=x_test_index).reindex(common_dates).dropna().values
-        for model, y_pred in predictions.items()
-    }
-
-    # Plot the chart
-    fig, ax = plt.subplots(figsize=(15, 8))
-    ax.plot(common_dates, y_test, label="Actual", linestyle='dashed')
-    for model_name, y_pred in predictions.items():
-        print("y_pred: ", len(y_pred))
-        ax.plot(common_dates, y_pred, label=f"Predicted ({model_name})")
-    ax.set_title("Predictions vs Actual Values")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Values")
-    ax.legend()
-    plt.xticks(rotation=45)
-    chart_path = os.path.join(TEMP_CHART_DIR, "prediction_chart.png")
-    plt.savefig(chart_path, format='png', bbox_inches='tight')
-    plt.close(fig)
-    return chart_path
-
-def create_error_chart(x_test_index, errors):
-    """
-    Generate a chart showing the error series for all models.
-    Ensure all time series have data for the same dates.
-
-    Returns:
-        str: Filepath of the saved error chart image.
-    """
-    # Align lengths of x_test_index and errors
-    min_length = min(len(x_test_index), *[len(error) for error in errors.values()])
-    x_test_index = x_test_index[:min_length]
-
-    # Remove duplicates from x_test_index
-    unique_index = ~x_test_index.duplicated(keep='first')  # Mask for unique indices
-    x_test_index = x_test_index[unique_index]
-
-    # Apply the same mask to errors
-    errors = {
-        model: error[:min(len(error), len(x_test_index))].flatten()
-        for model, error in errors.items()
-    }
-
-    # Find common dates across all series
-    common_dates = sorted(set(x_test_index))
-    errors = {
-        model: pd.Series(
-            error[:min(len(error), len(x_test_index))],
-            index=x_test_index[:min(len(error), len(x_test_index))]
-        ).reindex(common_dates).dropna().values  # Align errors with common_dates
-        for model, error in errors.items()
-    }
-
-    # Plot the chart
-    fig, ax = plt.subplots(figsize=(15, 8))
-    for model_name, error in errors.items():
-        ax.plot(common_dates, error, label=f"Error ({model_name})")
-    ax.set_title("Error Between Predictions and Actual Values")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Error")
-    ax.legend()
-    plt.xticks(rotation=45)
-    chart_path = os.path.join(TEMP_CHART_DIR, "error_chart.png")
-    plt.savefig(chart_path, format='png', bbox_inches='tight')
-    plt.close(fig)
-    return chart_path
-
-import json
-from flask import request, render_template, redirect, url_for
 
 AVAILABLE_FIELDS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\available_fields.json"  # Add this line
