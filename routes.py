@@ -412,8 +412,26 @@ def setup_routes(app):
                     model_handler.ML(model_handler.alpharnn_)
                 elif model == 'AlphatRNN':
                     model_handler.ML(model_handler.alphatrnn_)
+                elif model == 'CNN':
+                    model_handler.train_lob_cnn()
+                    # return redirect(url_for('comparison_results'))
 
-                y_pred = model_handler.model.predict(ml_data.get_data()['x_test'])
+                if model == 'CNN':
+                    # print("Prediction")
+                    x_test = model_handler.prepare_cnn_input(ml_data.get_data()['x_test'])
+                    # print("x_test  shape: ", x_test.shape)
+                    y_pred = model_handler.model.predict(x_test)
+                    # print("y_pred  shape: ", y_pred.shape)
+                else:
+                    y_pred = model_handler.model.predict(ml_data.get_data()['x_test'])
+
+                # threshold = 93600
+                # indices = np.where(y_pred < threshold)[0]
+                # print(indices)
+                
+                # print(ml_data.get_data()['x_test'][1280:1300])
+                # print(y_pred[0:5])
+
                 # Reverse normalization for both predictions and actual values
                 if ml_data.get_normalise():
                     # Retrieve normalisation parameters for the target

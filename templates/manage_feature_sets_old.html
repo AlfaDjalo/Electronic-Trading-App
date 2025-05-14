@@ -39,9 +39,9 @@
     <div class="form-group">
         <label for="function">Select Function</label>
         <select class="form-control" id="function" name="function">
+            <option value="raw_data">Raw Data</option>
             <option value="create_lagged_features">Create Lagged Features</option>
             <option value="average">Average</option>
-            <option value="raw_data">Raw Data</option>
         </select>
     </div>
 
@@ -123,9 +123,9 @@
                 </td>
                 <td>
                     <select class="form-control" name="target[function]">
+                        <option value="raw_data" {% if target.function == "raw_data" %}selected{% endif %}>Raw Data</option>
                         <option value="create_lagged_features" {% if target.function == "create_lagged_features" %}selected{% endif %}>Create Lagged Features</option>
                         <option value="average" {% if target.function == "average" %}selected{% endif %}>Average</option>
-                        <option value="raw_data" {% if target.function == "raw_data" %}selected{% endif %}>Raw Data</option>
                     </select>
                 </td>
                 <td>

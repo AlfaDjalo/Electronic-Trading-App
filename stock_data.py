@@ -3,8 +3,6 @@
 import pandas as pd
 import numpy as np
 import yfinance as yf
-# import statsmodels.api as sm
-# import matplotlib.pyplot as plt
 
 # Global constants for default dates
 DEFAULT_START_DATE = '2014-12-31'
@@ -14,38 +12,25 @@ DEFAULT_END_DATE = '2024-12-31'
 LOB_FILEPATH = "lob_data/order_book_history.csv"
 
 class StockData:
+    """
+    Object storing the raw time series data for the selected stock
+    """
     def __init__(self, data_type, ticker, start_date=DEFAULT_START_DATE, end_date=DEFAULT_END_DATE, load_data=False):
-    # def __init__(self, ticker, start_date=DEFAULT_START_DATE, end_date=DEFAULT_END_DATE, split_date='2022-12-31', load_data=False, create_model_data=False, use_lob_data=False):
         """
         Initialise StockData object.
 
         Args:
+            datatype (str): Type of data - "daily" or "intraday"
             ticker (str): Stock ticker symbol.
             start_date (str): Start date for the data (format: 'YYYY-MM-DD').
             end_date (str): End date for the data (format: 'YYYY-MM-DD').
-            split_date (str): Date to split data into training and testing sets.
             load_data (bool): Whether to load stock data immediately.
-            create_model_data (bool): Whether to create model data immediately.
-            use_lob_data (bool): Whether to use limit order book (LOB) data.
         """
         self.data_type = data_type
         self.ticker = ticker
         self.start_date = start_date
         self.end_date = end_date
         self.data = None
-
-        # self.split_date = split_date
-        # self.x_train = None
-        # self.y_train = None
-        # self.x_test = None
-        # self.y_test = None
-        # self.feature_column = 'close'
-        # self.features = []
-        # self.target = []
-
-        # self.use_lob_data = use_lob_data
-        # self.lob_data = None  # Initialize LOB data attribute
-        # self.data_type = "intraday" if self.use_lob_data else "daily"  # Set data_type based on use_lob_data
 
         if load_data is True:
             if self.data_type == "intraday":
@@ -59,25 +44,6 @@ class StockData:
                 self.loaded = True
         else:
             self.loaded = False
-
-        # if load_data is True:
-        #     if self.use_lob_data:
-        #         if LOB_FILEPATH:
-        #             self.load_lob_data(LOB_FILEPATH)
-        #             self.loaded = True
-        #         else:
-        #             raise ValueError("LOB data file path must be provided when use_lob_data is True.")
-        #     else:
-        #         self.load_data()
-        #         self.loaded = True
-        # else:
-        #     self.loaded = False
-
-        # if create_model_data is True and self.loaded is True:
-        #     self.split_data() # !!! Need to use full
-        #     self.model_data_created = True
-        # else:
-        #     self.model_data_created = False
 
     def __repr__(self):
         """
@@ -96,8 +62,15 @@ class StockData:
         """
         self.ticker = ticker
         if reload is True:
-            self.load_data()
-            self.loaded = True
+            if self.data_type == "intraday":
+                if LOB_FILEPATH:
+                    self.load_lob_data(LOB_FILEPATH)
+                    self.loaded = True
+                else:
+                    raise ValueError("LOB data file path must be provided for intraday data.")
+            else:
+                self.load_daily_data()
+                self.loaded = True
         else:
             self.loaded = False
 
@@ -113,8 +86,15 @@ class StockData:
         self.start_date = start_date
         self.end_date = end_date
         if reload is True:
-            self.load_data()
-            self.loaded = True
+            if self.data_type == "intraday":
+                if LOB_FILEPATH:
+                    self.load_lob_data(LOB_FILEPATH)
+                    self.loaded = True
+                else:
+                    raise ValueError("LOB data file path must be provided for intraday data.")
+            else:
+                self.load_daily_data()
+                self.loaded = True
         else:
             self.loaded = False
 
@@ -156,24 +136,6 @@ class StockData:
             raise ValueError("Stock data is not loaded.")
         return self.data
 
-    # def get_raw_data(self):
-    #     """
-    #     Get the loaded stock data.
-
-    #     Returns:
-    #         pd.DataFrame: DataFrame containing stock data.
-    #     """
-    #     return self.data
-
-    # def get_model_data(self):
-    #     """
-    #     Get the training and testing data.
-
-    #     Returns:
-    #         dict: Dictionary containing 'x_train', 'y_train', 'x_test', and 'y_test'.
-    #     """
-    #     return {'x_train': self.x_train, 'y_train': self.y_train, 'x_test': self.x_test, 'y_test': self.y_test }
-
     def load_daily_data(self):
         """
         Load stock data for the specified ticker and date range.
@@ -181,11 +143,11 @@ class StockData:
         Returns:
             bool: True if data is loaded successfully, None otherwise.
         """
-        print(f"Loading data for {self.ticker} from {self.start_date} to {self.end_date}...")
         if not self.ticker:
             print("No ticker provided.")
             return False
         try:
+            print(f"Loading data for {self.ticker} from {self.start_date} to {self.end_date}...")
             df = yf.download(tickers=self.ticker,
                              start=self.start_date,
                              end=self.end_date,
@@ -274,28 +236,6 @@ class StockData:
             print(e)
             return False
 
-    # def get_lob_data(self):
-    #     """
-    #     Get the loaded LOB data.
-
-    #     Returns:
-    #         pd.DataFrame: DataFrame containing LOB data.
-    #     """
-    #     if self.lob_data is None:
-    #         raise ValueError("LOB data is not loaded.")
-    #     return self.lob_data
-
-    # def get_daily_data(self):
-    #     """
-    #     Get the loaded daily stock data.
-
-    #     Returns:
-    #         pd.DataFrame: DataFrame containing daily stock data.
-    #     """
-    #     if self.data is None:
-    #         raise ValueError("Daily stock data is not loaded.")
-    #     return self.data
-
     def get_available_fields(self):
         """
         Get available fields based on the data type.
@@ -307,33 +247,3 @@ class StockData:
             list: A list of available fields.
         """
         return list(self.data.columns)
-
-    # def get_available_fields(self):
-    #     """
-    #     Get available fields based on the data type.
-
-    #     Args:
-    #         data_type (str): The type of data ('daily' or 'intraday').
-
-    #     Returns:
-    #         list: A list of available fields.
-    #     """
-    #     print(self.data_type)
-    #     if self.data_type == 'daily':
-    #     # if self.data_type == 'daily' and self.data is not None:
-    #         return list(self.data.columns)
-    #     elif self.data_type == 'intraday':
-    #     # elif self.data_type == 'intraday' and self.lob_data is not None:
-    #         return list(self.lob_data.columns)
-    #     else:
-    #         return []
-
-    # def get_data_type(self):
-    #     """
-    #     Get the data type (daily or intraday).
-
-    #     Returns:
-    #         str: The data type of the stock data.
-    #     """
-    #     return self.data_type
-

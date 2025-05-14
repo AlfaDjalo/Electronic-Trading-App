@@ -183,16 +183,65 @@
         "data_type": "intraday",
         "features": [
             {
-                "name": "bid_price_0",
+                "name": "bid_price_4",
                 "input_data_fields": [
-                    "bid_price_0"
+                    "bid_price_4"
                 ],
                 "function": "raw_data"
             },
             {
-                "name": "ask_price_0",
+                "name": "bid_volume_4",
                 "input_data_fields": [
-                    "ask_price_0"
+                    "bid_volume_4"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "bid_price_3",
+                "input_data_fields": [
+                    "bid_price_3"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "bid_volume_3",
+                "input_data_fields": [
+                    "bid_volume_3"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "bid_price_2",
+                "input_data_fields": [
+                    "bid_price_2"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "bid_volume_2",
+                "input_data_fields": [
+                    "bid_volume_2"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "bid_price_1",
+                "input_data_fields": [
+                    "bid_price_1"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "bid_volume_1",
+                "input_data_fields": [
+                    "bid_volume_1"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "bid_price_0",
+                "input_data_fields": [
+                    "bid_price_0"
                 ],
                 "function": "raw_data"
             },
@@ -204,9 +253,72 @@
                 "function": "raw_data"
             },
             {
+                "name": "ask_price_0",
+                "input_data_fields": [
+                    "ask_price_0"
+                ],
+                "function": "raw_data"
+            },
+            {
                 "name": "ask_volume_0",
                 "input_data_fields": [
                     "ask_volume_0"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_price_1",
+                "input_data_fields": [
+                    "ask_price_1"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_volume_1",
+                "input_data_fields": [
+                    "ask_volume_1"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_price_2",
+                "input_data_fields": [
+                    "ask_price_2"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_volume_2",
+                "input_data_fields": [
+                    "ask_volume_2"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_price_3",
+                "input_data_fields": [
+                    "ask_price_3"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_volume_3",
+                "input_data_fields": [
+                    "ask_volume_3"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_price_4",
+                "input_data_fields": [
+                    "ask_price_4"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_volume_4",
+                "input_data_fields": [
+                    "ask_volume_4"
                 ],
                 "function": "raw_data"
             }

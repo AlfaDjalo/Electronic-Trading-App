@@ -265,32 +265,6 @@ class MLData:
             raise ValueError(f"No normalisation parameters found for feature '{feature_name}'.")
         return self.normalisation_params[feature_name]
 
-    # # Setters with error checking
-    # def set_feature_column(self, feature_column):
-    #     if not isinstance(feature_column, str):
-    #         raise TypeError("Feature column must be a string.")
-    #     self.feature_column = feature_column
-    #     self.process_data()
-
-    # def set_split_date(self, split_date):
-    #     try:
-    #         self.split_date = pd.to_datetime(split_date)
-    #     except Exception:
-    #         raise ValueError("Split date must be a valid date string.")
-    #     self.process_data()
-
-    # def set_features(self, features):
-    #     if not isinstance(features, list) or not all(isinstance(f, str) for f in features):
-    #         raise TypeError("Features must be a list of strings.")
-    #     self.features = features
-    #     self.process_data()
-
-    # def set_target(self, target):
-    #     if not isinstance(target, str):
-    #         raise TypeError("Target must be a string.")
-    #     self.target = target
-    #     self.process_data()
-
     def set_log_returns(self, log_returns):
         if not isinstance(log_returns, bool):
             raise TypeError("Log returns must be a boolean.")
@@ -386,13 +360,6 @@ class MLData:
             self.data.dropna(inplace=True)
         except Exception as e:
             raise RuntimeError(f"Error applying feature set: {e}")
-
-    # def load_feature_set(self):
-    #     with open(FEATURE_SETS_FILE, "r") as file:
-    #         feature_set_dictionary = json.load(file)
-    
-    #     feature_set = feature_set_dictionary.get(self.feature_set_name, {})
-    #     return feature_set
 
     def get_feature_set(self):
         """

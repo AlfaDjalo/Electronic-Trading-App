@@ -14,6 +14,8 @@ from keras.models import Sequential
 from keras.layers import Dense, Layer, LSTM, GRU, SimpleRNN, RNN
 from keras.regularizers import l1, l2
 from keras.callbacks import EarlyStopping
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Conv1D, Flatten, Dense, Concatenate
 
 from alphaRNN import AlphaRNN
 from alphatRNN import AlphatRNN  # Import AlphaRNN and AlphatRNN modules
@@ -22,166 +24,41 @@ class ModelHandler:
     def __init__(self, data, params):
         self.data = data
         self.params = params
-
-
-    # def split_data(self):
-    #     """Split the data into training and testing sets based on the train_date."""
-    #     self.df.dropna(inplace=True)
-    #     self.df = self.df.reset_index()  # Moves index columns back to normal columns
-    #     # print(self.df.columns)
-        
-    #     train_mask = self.df['date'] <= self.train_date
-    #     test_mask = self.df['date'] > self.train_date
-    #     self.train_data = self.df[train_mask]
-    #     self.test_data = self.df[test_mask]
-
-    # def create_lagged_features(self, num_lags):
-    #     """Create lagged features for the regression model."""
-    #     if num_lags > 0:        
-    #         for i in range(1, num_lags + 1):
-    #             self.df['min_' + str(i) + '_close'] = self.df['close'].shift(i)
-    #     elif num_lags < 0:
-    #         self.df[f'fut_{-num_lags}_close'] = self.df['close'].shift(num_lags)
-
-    #     self.df.dropna(inplace=True)  # Drop rows with NaN values created by shifting
-
-    #     # Update train_data and test_data with the new features
-    #     train_mask = self.df['date'] <= self.train_date
-    #     test_mask = self.df['date'] > self.train_date
-    #     self.train_data = self.df[train_mask]
-    #     self.test_data = self.df[test_mask]
-
-    # def create_trend_features(self, num_lags):
-    #     """Create lagged features for the regression model."""
-    #     self.create_lagged_features(num_lags+1)
-
-    #     overall_trend = 0
-    #     for i in range(1, num_lags + 1):
-    #         self.df['min_' + str(i) + '_trend'] = np.where(self.df['min_' + str(i) + '_close'] > self.df['min_' + str(i+1) + '_close'], 1, -1)
-    #         overall_trend += self.df['min_' + str(i) + '_trend']
-
-    #     self.df['trend_' + str(num_lags) + '_day'] = np.where(overall_trend > 0, 1, -1)
-
-    #     # self.df['min_1_close'] = self.df['close'].shift(1)
-    #     # self.df['min_2_close'] = self.df['close'].shift(2)
-    #     self.df.dropna(inplace=True)  # Drop rows with NaN values created by shifting
-
-    #     # Update train_data and test_data with the new features
-    #     train_mask = self.df['date'] <= self.train_date
-    #     test_mask = self.df['date'] > self.train_date
-    #     self.train_data = self.df[train_mask]
-    #     self.test_data = self.df[test_mask]
-
-    # def prepare_features(self):
-    # # def prepare_features(self, features, target):
-    #     """Prepare features and target for training and testing."""
-    #     self.df.dropna(inplace=True)
-    #     self.X_train = self.train_data[self.features]
-    #     self.X_test = self.test_data[self.features]
-    #     self.Y_train = self.train_data[self.target]
-    #     self.Y_test = self.test_data[self.target]
-    #     return # X_train, X_test, y_train, y_test
-
-    # def standardise_input(self, feature, drop=False):
-
-    #     # mu = float(self.X_train[feature].mean())
-    #     # sigma = float(self.X_train[feature].std())
-    #     mu = float(self.X_train[feature].iloc[0])
-    #     sigma = float(self.X_train[feature].iloc[0])
-
-    #     stdize_input = lambda x: (x - mu) / sigma
-
-    #     # X_train = X_train.apply(stdize_input)
-    #     # X_test = X_test.apply(stdize_input)
-
-    #     self.X_train = (self.X_train - mu) / sigma
-    #     self.X_test = (self.X_test - mu) / sigma
-
-    #     if drop==True:
-    #         self.X_train[feature].drop
-    #         self.X_test[feature].drop
-        
-    #     return
+        self.model = None
 
     def regression(self):
         """Perform simple regression."""
-        # self.create_lagged_features(2)
-        # print(self.df.columns)
-
-        # self.features = ['min_1_close', 'min_2_close']
-        # self.target = ['close']
-        # self.prepare_features()
-
-        # print('x_train')
-        # print(self.data['x_train'])
-
-        # print('y_train')
-        # print(self.data['y_train'])
 
         self.model = LinearRegression(fit_intercept=True)
         self.model.fit(self.data['x_train'], self.data['y_train'])
 
         return
 
-    # def regression(self):
-    #     """Perform simple regression."""
-    #     self.create_lagged_features(2)
+    # def regression_on_trend(self):
+    #     """Perform regression on trend."""
+    #     self.create_trend_features(3)
+ 
     #     print(self.df.columns)
-
-    #     self.features = ['min_1_close', 'min_2_close']
+    #     self.features = ['min_1_close', 'trend_3_day']
     #     self.target = ['close']
+
     #     self.prepare_features()
 
     #     self.model = LinearRegression(fit_intercept=True)
     #     self.model.fit(self.X_train, self.Y_train)
-        
+
     #     return
-
-    def regression_on_trend(self):
-        """Perform regression on trend."""
-        self.create_trend_features(3)
- 
-
-        print(self.df.columns)
-        self.features = ['min_1_close', 'trend_3_day']
-        self.target = ['close']
-
-        self.prepare_features()
-
-        self.model = LinearRegression(fit_intercept=True)
-        self.model.fit(self.X_train, self.Y_train)
-
-        return
 
     def rnn(self):
         """Perform rnn regression."""
-        # if parameters is None:
-        #     parameters = {}
-
-        # print("In rnn model")
-
-        # print(self.params)
-        # Extract parameters
         epochs = self.params.get('epochs', {}).get('value', 201)
         batch_size = self.params.get('batch_size', {}).get('value', 1000)
         num_units = self.params.get('num_units', {}).get('value', 10)
         l1_reg = self.params.get('l1_reg', {}).get('value', 0.0)
         seed = self.params.get('seed', {}).get('value', 0)
         activation = self.params.get('activation', {}).get('value', 'tanh')
-        # print("Parameters extracted")
-
-        # self.create_lagged_features(4)    
-        # self.create_lagged_features(-4)
-        # print(self.df.columns)
-
-        # self.features = ['close', 'min_1_close', 'min_2_close', 'min_3_close', 'min_4_close']
-        # self.target = ['fut_4_close']
-        # self.prepare_features()
-
-        # self.standardise_input(['close'], drop=True)
 
         x_train = self.data['x_train'].values.reshape(self.data['x_train'].shape[0], self.data['x_train'].shape[1], 1)
-        # print(x_train)
 
         def SimpleRNN_():
             model = Sequential()
@@ -193,104 +70,69 @@ class ModelHandler:
             model.compile(loss='mean_squared_error', optimizer='adam')
             return model
 
-        # def LSTM_():
-        #     model = Sequential()
-        #     model.add(LSTM(num_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True)) 
-        #     model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
-        #     model.compile(loss='mean_squared_error', optimizer='adam')
-        #     return model
-
-        # params = {
-        #     'rnn': {'function': SimpleRNN_},
-        #     'lstm': {'function': LSTM_}
-        # }
-
-        # model_chosen = model_type
         es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
-        # print("About to run model")
 
         tf.random.set_seed(seed)
-        # print('Training rnn model')
         self.model = SimpleRNN_()
         self.model.fit(x_train, self.data['y_train'], epochs=epochs, 
                   batch_size=batch_size, callbacks=[es], shuffle=False)
-        # print("Just run model")
 
         return
 
-    # def ML(self, model_name):
-    #     """Perform rnn regression."""
-    #     epochs = self.params.get('epochs', {}).get('value', 201)
-    #     batch_size = self.params.get('batch_size', {}).get('value', 1000)
-    #     num_units = self.params.get('num_units', {}).get('value', 10)
-    #     l1_reg = self.params.get('l1_reg', {}).get('value', 0.0)
-    #     seed = self.params.get('seed', {}).get('value', 0)
-    #     activation = self.params.get('activation', {}).get('value', 'tanh')
 
-    #     x_train = self.data['x_train'].values.reshape(self.data['x_train'].shape[0], self.data['x_train'].shape[1], 1)
+    # def ml_regression(self, model_type="rnn", do_training=False, parameters=None):
+    #     """Perform machine learning regression."""
+    #     if parameters is None:
+    #         parameters = {}
 
+    #     # Extract parameters
+    #     epochs = parameters.get('epochs', 2000)
+    #     batch_size = parameters.get('batch_size', 1000)
+    #     n_units = parameters.get('n_units', 10)
+    #     l1_reg = parameters.get('l1_reg', 0.0)
+    #     seed = parameters.get('seed', 0)
+
+    #     self.create_lagged_features(4)    
+    #     self.create_lagged_features(-4)
+    #     print(self.df.columns)
+
+    #     self.features = ['close', 'min_1_close', 'min_2_close', 'min_3_close', 'min_4_close']
+    #     self.target = ['fut_4_close']
+    #     self.prepare_features()
+
+    #     self.standardise_input(['close'], drop=True)
+
+    #     self.X_train = self.X_train.values.reshape(self.X_train.shape[0], self.X_train.shape[1], 1)
+
+    #     def SimpleRNN_():
+    #         model = Sequential()
+    #         model.add(SimpleRNN(n_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True, stateful=False))  
+    #         model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
+    #         model.compile(loss='mean_squared_error', optimizer='adam')
+    #         return model
+
+    #     def LSTM_():
+    #         model = Sequential()
+    #         model.add(LSTM(n_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True)) 
+    #         model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
+    #         model.compile(loss='mean_squared_error', optimizer='adam')
+    #         return model
+
+    #     params = {
+    #         'rnn': {'function': SimpleRNN_},
+    #         'lstm': {'function': LSTM_}
+    #     }
+
+    #     model_chosen = model_type
     #     es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
 
     #     tf.random.set_seed(seed)
-    #     self.model = model_name()
-    #     self.model.fit(x_train, self.data['y_train'], epochs=epochs, 
+    #     print('Training', model_chosen, 'model')
+    #     self.model = params[model_chosen]['function']()
+    #     self.model.fit(self.X_train, self.Y_train, epochs=epochs, 
     #               batch_size=batch_size, callbacks=[es], shuffle=False)
 
     #     return
-
-    def ml_regression(self, model_type="rnn", do_training=False, parameters=None):
-        """Perform machine learning regression."""
-        if parameters is None:
-            parameters = {}
-
-        # Extract parameters
-        epochs = parameters.get('epochs', 2000)
-        batch_size = parameters.get('batch_size', 1000)
-        n_units = parameters.get('n_units', 10)
-        l1_reg = parameters.get('l1_reg', 0.0)
-        seed = parameters.get('seed', 0)
-
-        self.create_lagged_features(4)    
-        self.create_lagged_features(-4)
-        print(self.df.columns)
-
-        self.features = ['close', 'min_1_close', 'min_2_close', 'min_3_close', 'min_4_close']
-        self.target = ['fut_4_close']
-        self.prepare_features()
-
-        self.standardise_input(['close'], drop=True)
-
-        self.X_train = self.X_train.values.reshape(self.X_train.shape[0], self.X_train.shape[1], 1)
-
-        def SimpleRNN_():
-            model = Sequential()
-            model.add(SimpleRNN(n_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True, stateful=False))  
-            model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
-            model.compile(loss='mean_squared_error', optimizer='adam')
-            return model
-
-        def LSTM_():
-            model = Sequential()
-            model.add(LSTM(n_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True)) 
-            model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
-            model.compile(loss='mean_squared_error', optimizer='adam')
-            return model
-
-        params = {
-            'rnn': {'function': SimpleRNN_},
-            'lstm': {'function': LSTM_}
-        }
-
-        model_chosen = model_type
-        es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
-
-        tf.random.set_seed(seed)
-        print('Training', model_chosen, 'model')
-        self.model = params[model_chosen]['function']()
-        self.model.fit(self.X_train, self.Y_train, epochs=epochs, 
-                  batch_size=batch_size, callbacks=[es], shuffle=False)
-
-        return
 
     def get_stats(self, y_test, y_pred):
         """Calculate stats for the current model."""
@@ -299,18 +141,6 @@ class ModelHandler:
             'Variance': f"{r2_score(y_test, y_pred):.3f}"
         }
         return stats
-
-    # def get_plt(self):
-    #     """Create a plot for the current model."""
-    #     y_pred = self.model.predict(self.X_test) 
-
-    #     plt.scatter(self.Y_test, y_pred)
-    #     plt.plot([self.Y_test.min(), self.Y_test.max()], [self.Y_test.min(), self.Y_test.max()], 'r--', label='Perfect Fit')
-    #     plt.xlabel('Actual')
-    #     plt.ylabel('Predicted')
-    #     plt.legend()
-
-    #     return plt
 
     def prediction(self, input_data):
         
@@ -492,51 +322,310 @@ class ModelHandler:
 
         return
 
-    # def AlphatRNN_(self):
-    #     model = Sequential()
-    #     model.add(AlphatRNN(n_units, activation='tanh', recurrent_activation='sigmoid', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(x_train.shape[1], x_train.shape[-1]), unroll=True))  
-    #     model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
-    #     model.compile(loss='mean_squared_error', optimizer='adam')
+    # def lob_cnn_ffnn(self):
+    #     """Define and return a CNN + FFNN model for LOB data."""
+
+    #     # Define input for price and volume
+    #     price_input = Input(shape=(5, 1), name="price_input")  # 5 levels of prices
+    #     volume_input = Input(shape=(5, 1), name="volume_input")  # 5 levels of volumes
+
+    #     # Convolution for price
+    #     price_conv = Conv1D(filters=16, kernel_size=2, activation='relu', name="price_conv")(price_input)
+    #     price_flatten = Flatten(name="price_flatten")(price_conv)
+
+    #     # Convolution for volume
+    #     volume_conv = Conv1D(filters=16, kernel_size=2, activation='relu', name="volume_conv")(volume_input)
+    #     volume_flatten = Flatten(name="volume_flatten")(volume_conv)
+
+    #     # Concatenate price and volume features
+    #     combined = Concatenate(name="concat")([price_flatten, volume_flatten])
+
+    #     # Feed-forward layers
+    #     dense_1 = Dense(64, activation='relu', name="dense_1")(combined)
+    #     dense_2 = Dense(32, activation='relu', name="dense_2")(dense_1)
+    #     output = Dense(1, activation='linear', name="output")(dense_2)
+
+    #     # Create the model
+    #     model = Model(inputs=[price_input, volume_input], outputs=output, name="LOB_CNN_FFNN")
+    #     model.compile(optimizer='adam', loss='mean_squared_error')
+
     #     return model
 
-    # def AlphaRNN_(self):
-    #     model = Sequential()
-    #     model.add(AlphaRNN(
-    #         n_units,
-    #         activation='tanh',
-    #         kernel_initializer=keras.initializers.glorot_uniform(seed),
-    #         bias_initializer=keras.initializers.glorot_uniform(seed),
-    #         recurrent_initializer=keras.initializers.orthogonal(seed),
-    #         kernel_regularizer=l1(l1_reg),
-    #         input_shape=(self.data['x_train'].shape[1], self.data['x_train'].shape[-1]),
-    #         unroll=True
-    #     ))
-    #     model.add(Dense(
-    #         1,
-    #         kernel_initializer=keras.initializers.glorot_uniform(seed),
-    #         bias_initializer=keras.initializers.glorot_uniform(seed),
-    #         kernel_regularizer=l1(l1_reg)
-    #     ))
-    #     model.compile(loss='mean_squared_error', optimizer='adam')
-    #     return model
+    def lob_cnn_ffnn_improved(self):
+        """
+        Define and return an improved CNN + FFNN model for LOB data.
+        This model properly handles price and volume at each level as features.
+        """
+        print("Entering lob cnn ffnn improved")
 
-    # def GRU_(self):
-    #     model = Sequential()
-    #     model.add(GRU(
-    #         n_units,
-    #         activation='tanh',
-    #         kernel_initializer=keras.initializers.glorot_uniform(seed),
-    #         bias_initializer=keras.initializers.glorot_uniform(seed),
-    #         recurrent_initializer=keras.initializers.orthogonal(seed),
-    #         kernel_regularizer=l1(l1_reg),
-    #         input_shape=(self.data['x_train'].shape[1], self.data['x_train'].shape[-1]),
-    #         unroll=True
-    #     ))
-    #     model.add(Dense(
-    #         1,
-    #         kernel_initializer=keras.initializers.glorot_uniform(seed),
-    #         bias_initializer=keras.initializers.glorot_uniform(seed),
-    #         kernel_regularizer=l1(l1_reg)
-    #     ))
-    #     model.compile(loss='mean_squared_error', optimizer='adam')
-    #     return model
+        # For each level (bid and ask), we have both price and volume
+        # So for each side (bid/ask), each level has 2 features
+        
+        # Define inputs for bid side (5 levels, each with price and volume)
+        bid_input = Input(shape=(5, 2), name="bid_input")  # Shape: [levels, features(price,volume)]
+        
+        # Define inputs for ask side (5 levels, each with price and volume)
+        ask_input = Input(shape=(5, 2), name="ask_input")  # Shape: [levels, features(price,volume)]
+        
+        # Convolution for bid side - convolving across levels with price and volume as features
+        bid_conv = Conv1D(filters=8, kernel_size=1, activation='relu', name="bid_conv")(bid_input)
+        bid_flatten = Flatten(name="bid_flatten")(bid_conv)
+        
+        # Convolution for ask side - convolving across levels with price and volume as features
+        ask_conv = Conv1D(filters=8, kernel_size=1, activation='relu', name="ask_conv")(ask_input)
+        ask_flatten = Flatten(name="ask_flatten")(ask_conv)
+        
+        # Concatenate bid and ask features
+        combined = Concatenate(name="concat")([bid_flatten, ask_flatten])
+        
+        # Feed-forward layers
+        dense_1 = Dense(64, activation='relu', name="dense_1")(combined)
+        dense_2 = Dense(32, activation='relu', name="dense_2")(dense_1)
+        output = Dense(1, activation='linear', name="output")(dense_2)
+        
+        # Create the model
+        model = Model(inputs=[bid_input, ask_input], outputs=output, name="LOB_CNN_FFNN_Improved")
+        model.compile(optimizer='adam', loss='mean_squared_error')
+
+        print("Exiting lob cnn ffnn improved")
+        return model
+
+    def lob_cnn(self):
+        """
+        Define and return an CNN + FFNN model for LOB data.
+        This model properly handles price and volume at each level as features.
+        """
+        print("Entering lob cnn")
+
+        # For each level (bid and ask), we have both price and volume
+        # So for each side (bid/ask), each level has 2 features
+        
+        # Define inputs for bid side (5 levels, each with price and volume)
+        input = Input(shape=(10, 2), name="input")  # Shape: [levels, features(price,volume)]
+        
+        # Define inputs for ask side (5 levels, each with price and volume)
+        # ask_input = Input(shape=(5, 2), name="ask_input")  # Shape: [levels, features(price,volume)]
+        
+        # Convolution for bid side - convolving across levels with price and volume as features
+        conv = Conv1D(filters=8, kernel_size=1, activation='relu', name="conv")(input)
+        flatten = Flatten(name="flatten")(conv)
+        
+        # Convolution for ask side - convolving across levels with price and volume as features
+        # ask_conv = Conv1D(filters=8, kernel_size=1, activation='relu', name="ask_conv")(ask_input)
+        # ask_flatten = Flatten(name="ask_flatten")(ask_conv)
+        
+        # Concatenate bid and ask features
+        # combined = Concatenate(name="concat")([bid_flatten, ask_flatten])
+        
+        # Feed-forward layers
+        dense_1 = Dense(64, activation='relu', name="dense_1")(flatten)
+        dense_2 = Dense(32, activation='relu', name="dense_2")(dense_1)
+        output = Dense(1, activation='linear', name="output")(dense_2)
+        
+        # Create the model
+        model = Model(inputs=input, outputs=output, name="LOB_CNN")
+        model.compile(optimizer='adam', loss='mean_squared_error')
+
+        print("Exiting lob cnn")
+        return model
+
+
+    def prepare_lob_data_for_cnn(self):
+        """
+        Prepare LOB data for the improved CNN model.
+        This function reshapes the data so price and volume are treated as features at each level.
+        
+        Returns:
+            tuple: (bid_train, ask_train, target_train, bid_test, ask_test, target_test)
+        """
+        print("Entering prepare lob data for cnn")
+        if self.data is None:
+            raise ValueError("No LOB data loaded.")
+        
+        # Extract bid price and volume columns
+        bid_price_cols = [f'bid_price_{i}' for i in range(5)]
+        bid_volume_cols = [f'bid_volume_{i}' for i in range(5)]
+
+        # Extract ask price and volume columns
+        ask_price_cols = [f'ask_price_{i}' for i in range(5)]
+        ask_volume_cols = [f'ask_volume_{i}' for i in range(5)]
+
+        # print(bid_price_cols)
+
+        # print(self.data['x_train'])
+
+        # Prepare train data
+        bid_prices_train = self.data['x_train'][bid_price_cols].values
+        bid_volumes_train = self.data['x_train'][bid_volume_cols].values
+        ask_prices_train = self.data['x_train'][ask_price_cols].values
+        ask_volumes_train = self.data['x_train'][ask_volume_cols].values
+        target_train = self.data['y_train'].values
+
+        print(bid_prices_train)
+
+        # Prepare test data
+        bid_prices_test = self.data['x_test'][bid_price_cols].values
+        bid_volumes_test = self.data['x_test'][bid_volume_cols].values
+        ask_prices_test = self.data['x_test'][ask_price_cols].values
+        ask_volumes_test = self.data['x_test'][ask_volume_cols].values
+        target_test = self.data['y_test'].values
+        
+        # Number of samples
+        n_train_samples = len(self.data['x_train'])
+        n_test_samples = len(self.data['x_test'])
+        
+        print("n_train_samples", n_train_samples)
+
+        # Reshape train data
+        bid_train = np.zeros((n_train_samples, 5, 2))  # [samples, levels, features(price,volume)]
+        ask_train = np.zeros((n_train_samples, 5, 2))  # [samples, levels, features(price,volume)]
+        for i in range(5):  # For each level
+            bid_train[:, i, 0] = bid_prices_train[:, i]  # Price at level i
+            bid_train[:, i, 1] = bid_volumes_train[:, i]  # Volume at level i
+            ask_train[:, i, 0] = ask_prices_train[:, i]  # Price at level i
+            ask_train[:, i, 1] = ask_volumes_train[:, i]  # Volume at level i
+
+        print(bid_train)
+
+        # Reshape test data
+        bid_test = np.zeros((n_test_samples, 5, 2))  # [samples, levels, features(price,volume)]
+        ask_test = np.zeros((n_test_samples, 5, 2))  # [samples, levels, features(price,volume)]
+        for i in range(5):  # For each level
+            bid_test[:, i, 0] = bid_prices_test[:, i]  # Price at level i
+            bid_test[:, i, 1] = bid_volumes_test[:, i]  # Volume at level i
+            ask_test[:, i, 0] = ask_prices_test[:, i]  # Price at level i
+            ask_test[:, i, 1] = ask_volumes_test[:, i]  # Volume at level i
+        print("Exiting prepare lob data for cnn")        
+        return bid_train, ask_train, target_train, bid_test, ask_test, target_test
+
+    def prepare_cnn_input(self, input_series):
+        """
+        Prepare LOB data for the improved CNN model.
+        This function reshapes the data so price and volume are treated as features at each level.
+        
+        Returns:
+            tuple: (x_train, x_test)
+        """
+        print("Entering prepare cnn input")
+        if input_series is None:
+            raise ValueError("No input data.")
+        
+        # Extract bid price and volume columns
+        bid_price_cols = [f'bid_price_{i}' for i in range(5)]
+        bid_volume_cols = [f'bid_volume_{i}' for i in range(5)]
+
+        # Extract ask price and volume columns
+        ask_price_cols = [f'ask_price_{i}' for i in range(5)]
+        ask_volume_cols = [f'ask_volume_{i}' for i in range(5)]
+
+        # print(bid_price_cols)
+
+        # Prepare data
+        bid_prices = input_series[bid_price_cols].values
+        bid_volumes = input_series[bid_volume_cols].values
+        ask_prices = input_series[ask_price_cols].values
+        ask_volumes = input_series[ask_volume_cols].values
+
+        # print(bid_prices)
+
+        # Number of samples
+        n_samples = len(input_series['bid_price_0'])
+        
+        # print("n_samples", n_samples)
+
+        # Reshape train data
+        bid_series = np.zeros((n_samples, 5, 2))  # [samples, levels, features(price,volume)]
+        ask_series = np.zeros((n_samples, 5, 2))  # [samples, levels, features(price,volume)]
+        for i in range(5):  # For each level
+            bid_series[:, i, 0] = bid_prices[:, i]  # Price at level i
+            bid_series[:, i, 1] = bid_volumes[:, i]  # Volume at level i
+            ask_series[:, i, 0] = ask_prices[:, i]  # Price at level i
+            ask_series[:, i, 1] = ask_volumes[:, i]  # Volume at level i
+
+        # print(bid_series)
+
+        x_series = np.concatenate((bid_series, ask_series), axis=1)
+
+        print("Exiting prepare cnn input")        
+
+        return x_series
+
+
+    def train_lob_cnn(self):
+        """
+        Train the improved LOB CNN model.
+        
+        Args:
+            epochs (int): Number of training epochs
+            batch_size (int): Batch size for training
+            validation_split (float): Proportion of data to use for validation
+            
+        Returns:
+            history: Training history
+        """
+        print("Entering train lob cnn")
+        epochs = self.params.get('epochs', {}).get('value', 50)
+        batch_size = self.params.get('batch_size', {}).get('value', 32)
+        validation_split = self.params.get('validation_split', {}).get('value', 0.2)
+
+        # Prepare data
+        cnn_x_train = self.prepare_cnn_input(self.data['x_train'])
+        cnn_x_test = self.prepare_cnn_input(self.data['x_test'])
+        
+        # print("cnn_x_train")
+        # print(cnn_x_train)
+
+        # print("cnn_x_test")
+        # print(cnn_x_test)
+
+        print("Exiting train lob cnn")
+
+        # return
+
+        # bid_train, ask_train, target_train, bid_test, ask_test, target_test = self.prepare_lob_data_for_cnn()
+
+        # bid_train, ask_train, target_train, bid_test, ask_test, target_test = self.prepare_lob_data_for_cnn()
+        print("In train_lob_cnn")
+        # print(bid_train)
+        # print(ask_train)
+        # print(target_train)
+        # print(bid_test)
+        # print(ask_test)
+        # print(target_test)
+
+        # Create model
+        self.model = self.lob_cnn()
+        # self.model = self.lob_cnn_ffnn_improved()
+        
+        # Print model summary
+        self.model.summary()
+        
+        # print("x shape: ", cnn_x_train.shape)
+        # print("y shape: ", self.data["y_train"].shape)
+
+        # Train the model
+        history = self.model.fit(
+            cnn_x_train,
+            self.data["y_train"],
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_split=validation_split,
+            verbose=1
+        )
+        
+        # history = self.model.fit(
+        #     [bid_train, ask_train],
+        #     target_train,
+        #     epochs=epochs,
+        #     batch_size=batch_size,
+        #     validation_split=validation_split,
+        #     verbose=1
+        # )
+
+        # Evaluate on test data
+        # test_loss = self.model.evaluate([bid_test, ask_test], target_test, verbose=1)
+        # print(f"Test Loss: {test_loss}")
+        
+        print("Exiting train lob cnn")
+        # self.model = model
+        return

@@ -1,196 +1,189 @@
 {
-  "Daily data historical": {
-      "features": [
-          {
-              "name": "Close",
-              "input_data_fields": "[Close]",
-              "function": "raw_data",
-              "function_parameters": null
-          },
-          {
-              "name": "Close_lagged_1",
-              "input_data_fields": "[Close]",
-              "function": "create_lagged_features",
-              "function_parameters": {
-                  "num_lags": 1
-              }
-          },
-          {
-              "name": "Close_lagged_2",
-              "input_data_fields": "[Close]",
-              "function": "create_lagged_features",
-              "function_parameters": {
-                  "num_lags": 2
-              }
-          }
-      ],
-      "data_type": "daily",
-      "target": {
-          "input_data_fields": [
-              "Close"
-          ],
-          "function": "create_lagged_features",
-          "function_parameters": {
-              "num_lags": -1
-          }
-      }
-  },
-  "Daily data historical 2": {
-      "features": [
-          {
-              "name": "Close",
-              "input_data_fields": "[Close]",
-              "function": "raw_data",
-              "function_parameters": null
-          },
-          {
-              "name": "Close_lagged_1",
-              "input_data_fields": "[Close]",
-              "function": "create_lagged_features",
-              "function_parameters": {
-                  "num_lags": 1
-              }
-          },
-          {
-              "name": "Close_lagged_2",
-              "input_data_fields": "[Close]",
-              "function": "create_lagged_features",
-              "function_parameters": {
-                  "num_lags": 2
-              }
-          },
-          {
-              "name": "Feature_4",
-              "input_data_fields": [
-                  "Volume"
-              ],
-              "function": "create_lagged_features",
-              "function_parameters": {
-                  "num_lags": 2
-              }
-          },
-          {
-              "name": "Feature_6",
-              "input_data_fields": [
-                  "High",
-                  "Low"
-              ],
-              "function": "average",
-              "function_parameters": null
-          }
-      ],
-      "data_type": "daily",
-      "target": {
-          "input_data_fields": [
-              "Close"
-          ],
-          "function": "create_lagged_features",
-          "function_parameters": {
-              "num_lags": -1
-          }
-      }
-  },
-  "OHLCV": {
-      "features": [
-          {
-              "name": "volume",
-              "input_data_fields": [
-                  "volume"
-              ],
-              "function": "raw_data",
-              "function_parameters": null
-          },
-          {
-              "name": "open",
-              "input_data_fields": [
-                  "open"
-              ],
-              "function": "raw_data",
-              "function_parameters": null
-          },
-          {
-              "name": "high",
-              "input_data_fields": [
-                  "high"
-              ],
-              "function": "raw_data",
-              "function_parameters": null
-          },
-          {
-              "name": "low",
-              "input_data_fields": [
-                  "low"
-              ],
-              "function": "raw_data",
-              "function_parameters": null
-          },
-          {
-              "name": "close",
-              "input_data_fields": [
-                  "close"
-              ],
-              "function": "raw_data",
-              "function_parameters": null
-          }
-      ],
-      "data_type": "daily",
-      "target": {
-          "input_data_fields": [
-              "close"
-          ],
-          "function": "create_lagged_features",
-          "function_parameters": {
-              "num_lags": -1
-          }
-      }
-  },
-  "Limit Order Book": {
-      "data_type": "intraday",
-      "features": [
-          {
-              "name": "bid_price_0",
-              "input_data_fields": [
-                  "bid_price_0"
-              ],
-              "function": "raw_data"
-          },
-          {
-              "name": "ask_price_0",
-              "input_data_fields": [
-                  "ask_price_0"
-              ],
-              "function": "raw_data"
-          },
-          {
-              "name": "bid_volume_0",
-              "input_data_fields": [
-                  "bid_volume_0"
-              ],
-              "function": "raw_data"
-          },
-          {
-              "name": "ask_volume_0",
-              "input_data_fields": [
-                  "ask_volume_0"
-              ],
-              "function": "raw_data"
-          }
-      ],
-      "target": {
-          "input_data_fields": [
-              "mid_price"
-          ],
-          "function": "create_lagged_features",
-          "function_parameters": {
-              "num_lags": -1
-          }
-      }
-  },
-  "New Feature Set": {
-      "Feature 1": {},
-      "Feature 2": {},
-      "data_type": "daily",
-      "features": [],
-      "target": null
-  }
+    "Daily data historical": {
+        "features": [
+            {
+                "name": "Close",
+                "input_data_fields": ["close"],
+                "function": "raw_data",
+                "function_parameters": null
+            },
+            {
+                "name": "Close_lagged_1",
+                "input_data_fields": ["close"],
+                "function": "create_lagged_features",
+                "function_parameters": {
+                    "num_lags": 1
+                }
+            },
+            {
+                "name": "Close_lagged_2",
+                "input_data_fields": ["close"],
+                "function": "create_lagged_features",
+                "function_parameters": {
+                    "num_lags": 2
+                }
+            }
+        ],
+        "data_type": "daily",
+        "target": {
+            "input_data_fields": [
+                "close"
+            ],
+            "function": "create_lagged_features",
+            "function_parameters": {
+                "num_lags": -1
+            }
+        }
+    },
+    "Daily data historical 2": {
+        "features": [
+            {
+                "name": "Close",
+                "input_data_fields": ["close"],
+                "function": "raw_data",
+                "function_parameters": null
+            },
+            {
+                "name": "Close_lagged_1",
+                "input_data_fields": ["close"],
+                "function": "create_lagged_features",
+                "function_parameters": {
+                    "num_lags": 1
+                }
+            },
+            {
+                "name": "Close_lagged_2",
+                "input_data_fields": ["close"],
+                "function": "create_lagged_features",
+                "function_parameters": {
+                    "num_lags": 2
+                }
+            },
+            {
+                "name": "Feature_4",
+                "input_data_fields": [
+                    "Volume"
+                ],
+                "function": "create_lagged_features",
+                "function_parameters": {
+                    "num_lags": 2
+                }
+            },
+            {
+                "name": "Feature_6",
+                "input_data_fields": [
+                    "High",
+                    "Low"
+                ],
+                "function": "average",
+                "function_parameters": null
+            }
+        ],
+        "data_type": "daily",
+        "target": {
+            "input_data_fields": [
+                "close"
+            ],
+            "function": "create_lagged_features",
+            "function_parameters": {
+                "num_lags": -1
+            }
+        }
+    },
+    "OHLCV": {
+        "features": [
+            {
+                "name": "volume",
+                "input_data_fields": [
+                    "volume"
+                ],
+                "function": "raw_data",
+                "function_parameters": null
+            },
+            {
+                "name": "open",
+                "input_data_fields": [
+                    "open"
+                ],
+                "function": "raw_data",
+                "function_parameters": null
+            },
+            {
+                "name": "high",
+                "input_data_fields": [
+                    "high"
+                ],
+                "function": "raw_data",
+                "function_parameters": null
+            },
+            {
+                "name": "low",
+                "input_data_fields": [
+                    "low"
+                ],
+                "function": "raw_data",
+                "function_parameters": null
+            },
+            {
+                "name": "close",
+                "input_data_fields": [
+                    "close"
+                ],
+                "function": "raw_data",
+                "function_parameters": null
+            }
+        ],
+        "data_type": "daily",
+        "target": {
+            "input_data_fields": [
+                "close"
+            ],
+            "function": "create_lagged_features",
+            "function_parameters": {
+                "num_lags": -1
+            }
+        }
+    },
+    "Limit Order Book": {
+        "data_type": "intraday",
+        "features": [
+            {
+                "name": "bid_price_0",
+                "input_data_fields": [
+                    "bid_price_0"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_price_0",
+                "input_data_fields": [
+                    "ask_price_0"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "bid_volume_0",
+                "input_data_fields": [
+                    "bid_volume_0"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_volume_0",
+                "input_data_fields": [
+                    "ask_volume_0"
+                ],
+                "function": "raw_data"
+            }
+        ],
+        "target": {
+            "input_data_fields": [
+                "mid_price"
+            ],
+            "function": "create_lagged_features",
+            "function_parameters": {
+                "num_lags": -1
+            }
+        }
+    }
 }
