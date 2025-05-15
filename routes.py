@@ -13,14 +13,14 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 from flask_caching import Cache
 from datetime import date, datetime
-from babel.numbers import format_decimal  # Add this import for number formatting
+from babel.numbers import format_decimal
 
 # import app modules
 from models import ModelHandler
-from stock_data import StockData, DEFAULT_START_DATE, DEFAULT_END_DATE, LOB_FILEPATH  # Import LOB_FILEPATH
+from stock_data import StockData, DEFAULT_START_DATE, DEFAULT_END_DATE, LOB_FILEPATH
 from ml_data import MLData
 from feature_set import FeatureSetManager
-from charts import create_chart, TEMP_CHART_DIR # Update import to use create_chart
+from charts import create_chart, TEMP_CHART_DIR
 
 def is_date(value):
     """Check if a value is a date or datetime."""
@@ -67,6 +67,7 @@ def setup_routes(app):
 
     # Initialize chart data as a shared resource
     chart_data = {
+        "input_data_chart": None,
         "prediction_chart": None,
         "error_chart": None
     }
@@ -79,20 +80,32 @@ def setup_routes(app):
 
     feature_set_manager = FeatureSetManager(FEATURE_SETS_FILE)
 
-    @app.route("/")
     # @app.route("/", methods=["GET", "POST"])
+    @app.route("/")
     def index():
         # if request.method == "POST":
-        #     session["category"] = request.form.get("category", "australian")
+        #     print("In POST request")
+        #     session["category"] = request.form.get("category")
         #     session["ticker"] = request.form.get("ticker")
         #     session["start_date"] = request.form.get("start_date")
         #     session["end_date"] = request.form.get("end_date")
-        #     session["comparisons"] = []  # Clear comparisons when changing ticker or dates
-        #     return redirect(url_for("index"))
-
-        # Clear session data when the user visits the home page
+        #     session["data_type"] = "intraday" if request.form.get("use_lob_data") else "daily"
+        #     print("Creating StockData object")
+        #     stock_data = StockData(
+        #         session["data_type"],
+        #         session["ticker"],
+        #         session.get('start_date'),
+        #         session.get('end_date'),
+        #         load_data=True,
+        #         )
+        #     print("Saving StockData object to session")
+        #     session["stock_data"] = stock_data
+        #     print("Printing StockData object")
+        #     print(session["stock_data"].get_data().head())
+        #     print("Exiting POST request")
+        #     return redirect(url_for('comparison_page'))  # Redirect to a page with a "Load Data" button
+        # else:
         session.clear()
-
         category = session.get("category", "australian")
         tickers = get_tickers_by_category(category)
         return render_template(
@@ -100,9 +113,26 @@ def setup_routes(app):
             category=category,
             tickers=tickers,
             session_ticker=session.get("ticker"),
-            session_start_date=session.get("start_date", DEFAULT_START_DATE),  # Use default start date
-            session_end_date=session.get("end_date", DEFAULT_END_DATE),  # Use default end date
+            session_start_date=session.get("start_date", DEFAULT_START_DATE),
+            session_end_date=session.get("end_date", DEFAULT_END_DATE),
+            session=session, # Pass the session to the template if needed for LOB checkbox state
         )
+
+    # @app.route("/")
+    # def index():
+    #     # Clear session data when the user visits the home page
+    #     session.clear()
+
+    #     category = session.get("category", "australian")
+    #     tickers = get_tickers_by_category(category)
+    #     return render_template(
+    #         "index.html",
+    #         category=category,
+    #         tickers=tickers,
+    #         session_ticker=session.get("ticker"),
+    #         session_start_date=session.get("start_date", DEFAULT_START_DATE),  # Use default start date
+    #         session_end_date=session.get("end_date", DEFAULT_END_DATE),  # Use default end date
+    #     )
 
     @app.route('/create_comparison', methods=['POST'])
     def create_comparison():
@@ -474,6 +504,8 @@ def setup_routes(app):
                 'prediction_chart': prediction_chart_path,
                 'error_chart': error_chart_path
             }
+            print(session['chart_paths'])
+            print(session['chart_paths']['prediction_chart'])
 
         # Store results in the session for rendering on the comparison_results page
         session['comparison_results'] = {
@@ -501,6 +533,67 @@ def setup_routes(app):
             error_chart_url=url_for('serve_chart', filename=os.path.basename(chart_paths.get('error_chart', '')))
         )
 
+    @app.route('/view_charts', methods=['GET','POST'])
+    def view_charts():
+        """
+        Display the results of the comparisons.
+
+        Returns:
+            Response: Rendered HTML template with comparison results.
+        """
+        # comparison_results = session.get('comparison_results', {})
+
+        ticker = session.get('ticker')  # Use ticker from session
+        start_date = session.get('start_date')  # Use start_date from session
+        end_date = session.get('end_date')  # Use end_date from session
+        data_type = session.get('data_type')
+
+        if request.method == 'POST':
+            stock_data = StockData(
+                data_type,
+                ticker, 
+                start_date, 
+                end_date, 
+                load_data=True
+            )
+
+            # Select the appropriate data type
+            raw_data = stock_data.get_data()
+            features = stock_data.get_available_fields()        
+        
+            feature = request.form.get('feature')
+
+            time_series = raw_data.index
+            feature_series = {feature: raw_data[feature].values}
+
+            feature_chart_path = create_chart(time_series, feature_series, chart_type='feature')
+            if 'chart_paths' not in session:
+                session['chart_paths'] = {
+                    'feature_chart': feature_chart_path
+                    }
+            else:
+                print(session['chart_paths'])
+                session['chart_paths']['feature_chart'] = feature_chart_path
+    
+            # {
+            #     'prediction_chart': prediction_chart_path,
+            #     'error_chart': error_chart_path
+            #     'feature_chart': feature_chart_path
+            # }
+        else: 
+            available_fields_data = load_available_fields()
+            features = available_fields_data.get(data_type, {}).get("fields", [])
+            feature = features[0]
+
+        print(features)
+        chart_paths = session.get('chart_paths', {})
+        return render_template(
+            'view_charts.html',
+            selected_feature=feature,
+            features=features,
+            feature_chart_url=url_for('serve_chart', filename=os.path.basename(chart_paths.get('feature_chart', '')))
+        )
+
     @app.route('/chart/<filename>')
     def serve_chart(filename):
         """
@@ -526,20 +619,29 @@ def setup_routes(app):
         Returns:
             Response: Rendered HTML template with data samples.
         """
+        ticker = session.get('ticker')  # Use ticker from session
+        start_date = session.get('start_date')  # Use start_date from session
+        end_date = session.get('end_date')  # Use end_date from session
+        data_type = session.get('data_type')
+        stock_data = session.get('stock_data')
+        
+        if index==9999:
+            print("Called from top button.")
+            print(stock_data.get_data()[0:5])
+            return render_template('test_stock_data.html', data_preview=None, error_message='Not built yet.')
+        else:
+            print("Called from comparison.")
+
         comparisons = session.get('comparisons', [])
         if index >= len(comparisons):
             return "Comparison not found", 404
 
         comparison = comparisons[index]
-        ticker = session.get('ticker')  # Use ticker from session
-        start_date = session.get('start_date')  # Use start_date from session
-        end_date = session.get('end_date')  # Use end_date from session
         # lag_period = int(comparison['params'].get('num_days_lag', {}).get('value', DEFAULT_LAG_PERIOD))
         # forecast_period = int(comparison['params'].get('forward_projection_days', {}).get('value', DEFAULT_FORECAST_PERIOD))
         # log_returns = comparison.get('use_log_returns', False)
         normalise = comparison.get('normalise', {})
         # use_lob_data = session.get('use_lob_data', False)  # Retrieve LOB data flag from session
-        data_type = session.get('data_type')
         # Check if processed data is cached
         cache_key = f"processed_data_{index}"
         processed_data = cache.get(cache_key)
@@ -554,14 +656,6 @@ def setup_routes(app):
                     end_date, 
                     load_data=True
                 )
-
-                # stock_data = StockData(
-                #     ticker, 
-                #     start_date, 
-                #     end_date, 
-                #     load_data=True, 
-                #     use_lob_data=use_lob_data
-                # )
 
                 # Select the appropriate data type
                 raw_data = stock_data.get_data()

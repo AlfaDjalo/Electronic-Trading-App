@@ -21,6 +21,8 @@ def create_chart(x_test_index, data, chart_type):
     Returns:
         str: Filepath of the saved chart image.
     """
+    print("Chart data:")
+    print(data)
     # Align lengths of x_test_index and data
     min_length = min(len(x_test_index), *[len(series) for series in data.values()])
     x_test_index = x_test_index[:min_length]
@@ -53,18 +55,27 @@ def create_chart(x_test_index, data, chart_type):
             ax.plot(common_dates, y_pred, label=f"Predicted ({model_name})")
         ax.set_title("Predictions vs Actual Values")
         ax.set_ylabel("Values")
+        chart_filename = "prediction_chart.png"
     elif chart_type == 'error':
         for model_name, error in data.items():
             ax.plot(common_dates, error, label=f"Error ({model_name})")
         ax.set_title("Error Between Predictions and Actual Values")
         ax.set_ylabel("Error")
+        chart_filename = "error_chart.png" 
+    elif chart_type == 'feature':
+        print("Processing feature chart")
+        for feature, series in data.items():
+            ax.plot(common_dates, series, label=f"Feature ({feature})")
+        ax.set_title(feature)
+        ax.set_ylabel("Values")
+        chart_filename = "feature_chart.png" 
     else:
         raise ValueError("Invalid chart_type. Use 'prediction' or 'error'.")
 
     ax.set_xlabel("Date")
     ax.legend()
     plt.xticks(rotation=45)
-    chart_filename = "prediction_chart.png" if chart_type == 'prediction' else "error_chart.png"
+    # chart_filename = "prediction_chart.png" if chart_type == 'prediction' else "error_chart.png"
     chart_path = os.path.join(TEMP_CHART_DIR, chart_filename)
     plt.savefig(chart_path, format='png', bbox_inches='tight')
     plt.close(fig)

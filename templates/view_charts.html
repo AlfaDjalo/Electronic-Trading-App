@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}View Charts{% endblock %}
+
+{% block content %}
+<h3>View feature charts for {{ selected_ticker }}</h3>
+
+<form method="post" action="{{ url_for('view_charts') }}">
+    <div class="form-group">
+        <label for="feature">Feature</label>
+        <select class="form-control" id="feature" name="feature">
+            {% for feature in features %}
+            <option value="{{ feature }}" {% if feature == selected_feature %}selected{% endif %}>{{ feature }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">View chart</button>
+</form>
+
+
+<h4>Feature History</h4>
+<img src="{{ feature_chart_url }}" alt="Feature Chart" class="img-fluid">
+
+<a href="{{ url_for('comparison_page') }}" class="btn btn-primary mt-3">Back to Comparisons</a>
+{% endblock %}
