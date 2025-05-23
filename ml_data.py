@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import json
+import ta
 
 FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\feature_sets.json"
 
@@ -12,7 +13,7 @@ class MLData:
         Args:
             raw_data (pd.DataFrame): DataFrame containing raw data (daily or intraday).
             train_percentage (float): Percentage of data to use for training (0 < train_percentage < 1).
-            feature_set_name (str): Name of the feature set to apply.
+            feature_set (str): Feature set to apply.
             normalise (bool): Whether to normalise the input features.
         """
         if raw_data is None:
@@ -145,6 +146,109 @@ class MLData:
 
         except Exception as e:
             raise RuntimeError(f"Error during average calculation: {e}")
+
+    def create_rsi(self, input_field, window=20):
+        """
+        Calculate the RSI (Relative Strength Indicator) of the specified input fields.
+
+        Args:
+            input_fields (str): Name of column to calculate the rsi for.
+            Window (integer): The window which the rsi is calculated over.
+
+        Returns:
+            pd.Series: A series containing the rsi for the input field.
+        """
+        data_col = self.data[input_field]
+
+        if isinstance(data_col, pd.DataFrame):
+            series_data = data_col.iloc[:,0]
+        else:
+            series_data = data_col
+
+        return ta.momentum.RSIIndicator(close=series_data, window=window).rsi()
+
+    def create_bb_high(self, input_field, window=20):
+        """
+        Calculate the High Bollinger Bands of the specified input field.
+
+        Args:
+            input_fields (str): Name of column to calculate the metric for.
+            Window (integer): The window which the metric is calculated over.
+
+        Returns:
+            pd.Series: A series containing the metric for the input field.
+        """
+        data_col = self.data[input_field]
+
+        if isinstance(data_col, pd.DataFrame):
+            series_data = data_col.iloc[:,0]
+        else:
+            series_data = data_col
+
+        return ta.volatility.BollingerBands(close=np.log1p(series_data), window=window).bollinger_hband()
+
+    def create_bb_mid(self, input_field, window=20):
+        """
+        Calculate the Mid Bollinger Band of the specified input fields.
+
+        Args:
+            input_fields (str): Name of column to calculate the metric for.
+            Window (integer): The window which the metric is calculated over.
+
+        Returns:
+            pd.Series: A series containing the metric for the input field.
+        """
+        data_col = self.data[input_field]
+
+        if isinstance(data_col, pd.DataFrame):
+            series_data = data_col.iloc[:,0]
+        else:
+            series_data = data_col
+
+        return ta.volatility.BollingerBands(close=np.log1p(series_data), window=window).bollinger_mavg()
+
+    def create_bb_low(self, input_field, window=20):
+        """
+        Calculate the Low Bollinger Band of the specified input fields.
+
+        Args:
+            input_fields (str): Name of column to calculate the metric for.
+            Window (integer): The window which the metric is calculated over.
+
+        Returns:
+            pd.Series: A series containing the metric for the input field.
+        """
+        data_col = self.data[input_field]
+
+        if isinstance(data_col, pd.DataFrame):
+            series_data = data_col.iloc[:,0]
+        else:
+            series_data = data_col
+
+        return ta.volatility.BollingerBands(close=np.log1p(series_data), window=window).bollinger_lband()
+
+    def create_macd(self, input_field, window_slow=26, window_fast=12, window_sign=9):
+        """
+        Calculate the macd (Moving Average Convergence Divergence ?) of the specified input fields.
+
+        Args:
+            input_fields (str): Name of column to calculate the metric for.
+            Window (integer): The window which the metric is calculated over.
+
+        Returns:
+            pd.Series: A series containing the metric for the input field.
+        """
+        data_col = self.data[input_field]
+
+        if isinstance(data_col, pd.DataFrame):
+            series_data = data_col.iloc[:,0]
+        else:
+            series_data = data_col
+
+        macd = ta.trend.MACD(close=series_data, window_slow=window_slow, window_fast=window_fast, window_sign=window_sign).macd()
+
+        return macd.sub(macd.mean()).div(macd.std())
+
 
     def normalise_columns(self, columns, train_data, test_data):
         """

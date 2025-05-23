@@ -1,7 +1,10 @@
-import pytest
+import sys
 import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import pytest
 import json
-from feature_set import FeatureSet
+from feature_set import FeatureSetManager
 
 FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\feature_sets.json"
 
@@ -11,7 +14,7 @@ def feature_set_manager():
     temp_file = "temp_feature_sets.json"
     with open(temp_file, "w") as f:
         json.dump({}, f)
-    manager = FeatureSet()
+    manager = FeatureSetManager(FEATURE_SETS_FILE)
     manager.FEATURE_SETS_FILE = temp_file
     yield manager
     os.remove(temp_file)

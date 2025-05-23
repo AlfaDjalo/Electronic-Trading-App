@@ -26,6 +26,22 @@ class ModelHandler:
         self.params = params
         self.model = None
 
+    def get_data(self):
+        """Getter for ModelHandler data"""
+        return self.data
+
+    def get_params(self):
+        """Getter for ModelHandler params"""
+        return self.params
+
+    def set_data(self, data):
+        """Setter for ModelHandler data"""
+        self.data = data
+        
+    def set_params(self, params):
+        """Setter for ModelHandler data"""
+        self.params = params
+
     def regression(self):
         """Perform simple regression."""
 
@@ -33,21 +49,6 @@ class ModelHandler:
         self.model.fit(self.data['x_train'], self.data['y_train'])
 
         return
-
-    # def regression_on_trend(self):
-    #     """Perform regression on trend."""
-    #     self.create_trend_features(3)
- 
-    #     print(self.df.columns)
-    #     self.features = ['min_1_close', 'trend_3_day']
-    #     self.target = ['close']
-
-    #     self.prepare_features()
-
-    #     self.model = LinearRegression(fit_intercept=True)
-    #     self.model.fit(self.X_train, self.Y_train)
-
-    #     return
 
     def rnn(self):
         """Perform rnn regression."""
@@ -78,61 +79,6 @@ class ModelHandler:
                   batch_size=batch_size, callbacks=[es], shuffle=False)
 
         return
-
-
-    # def ml_regression(self, model_type="rnn", do_training=False, parameters=None):
-    #     """Perform machine learning regression."""
-    #     if parameters is None:
-    #         parameters = {}
-
-    #     # Extract parameters
-    #     epochs = parameters.get('epochs', 2000)
-    #     batch_size = parameters.get('batch_size', 1000)
-    #     n_units = parameters.get('n_units', 10)
-    #     l1_reg = parameters.get('l1_reg', 0.0)
-    #     seed = parameters.get('seed', 0)
-
-    #     self.create_lagged_features(4)    
-    #     self.create_lagged_features(-4)
-    #     print(self.df.columns)
-
-    #     self.features = ['close', 'min_1_close', 'min_2_close', 'min_3_close', 'min_4_close']
-    #     self.target = ['fut_4_close']
-    #     self.prepare_features()
-
-    #     self.standardise_input(['close'], drop=True)
-
-    #     self.X_train = self.X_train.values.reshape(self.X_train.shape[0], self.X_train.shape[1], 1)
-
-    #     def SimpleRNN_():
-    #         model = Sequential()
-    #         model.add(SimpleRNN(n_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True, stateful=False))  
-    #         model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
-    #         model.compile(loss='mean_squared_error', optimizer='adam')
-    #         return model
-
-    #     def LSTM_():
-    #         model = Sequential()
-    #         model.add(LSTM(n_units, activation='tanh', kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), recurrent_initializer=keras.initializers.orthogonal(seed), kernel_regularizer=l1(l1_reg), input_shape=(self.X_train.shape[1], self.X_train.shape[-1]), unroll=True)) 
-    #         model.add(Dense(1, kernel_initializer=keras.initializers.glorot_uniform(seed), bias_initializer=keras.initializers.glorot_uniform(seed), kernel_regularizer=l1(l1_reg)))
-    #         model.compile(loss='mean_squared_error', optimizer='adam')
-    #         return model
-
-    #     params = {
-    #         'rnn': {'function': SimpleRNN_},
-    #         'lstm': {'function': LSTM_}
-    #     }
-
-    #     model_chosen = model_type
-    #     es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
-
-    #     tf.random.set_seed(seed)
-    #     print('Training', model_chosen, 'model')
-    #     self.model = params[model_chosen]['function']()
-    #     self.model.fit(self.X_train, self.Y_train, epochs=epochs, 
-    #               batch_size=batch_size, callbacks=[es], shuffle=False)
-
-    #     return
 
     def get_stats(self, y_test, y_pred):
         """Calculate stats for the current model."""
@@ -321,35 +267,6 @@ class ModelHandler:
         print("In model, model fit")
 
         return
-
-    # def lob_cnn_ffnn(self):
-    #     """Define and return a CNN + FFNN model for LOB data."""
-
-    #     # Define input for price and volume
-    #     price_input = Input(shape=(5, 1), name="price_input")  # 5 levels of prices
-    #     volume_input = Input(shape=(5, 1), name="volume_input")  # 5 levels of volumes
-
-    #     # Convolution for price
-    #     price_conv = Conv1D(filters=16, kernel_size=2, activation='relu', name="price_conv")(price_input)
-    #     price_flatten = Flatten(name="price_flatten")(price_conv)
-
-    #     # Convolution for volume
-    #     volume_conv = Conv1D(filters=16, kernel_size=2, activation='relu', name="volume_conv")(volume_input)
-    #     volume_flatten = Flatten(name="volume_flatten")(volume_conv)
-
-    #     # Concatenate price and volume features
-    #     combined = Concatenate(name="concat")([price_flatten, volume_flatten])
-
-    #     # Feed-forward layers
-    #     dense_1 = Dense(64, activation='relu', name="dense_1")(combined)
-    #     dense_2 = Dense(32, activation='relu', name="dense_2")(dense_1)
-    #     output = Dense(1, activation='linear', name="output")(dense_2)
-
-    #     # Create the model
-    #     model = Model(inputs=[price_input, volume_input], outputs=output, name="LOB_CNN_FFNN")
-    #     model.compile(optimizer='adam', loss='mean_squared_error')
-
-    #     return model
 
     def lob_cnn_ffnn_improved(self):
         """

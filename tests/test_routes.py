@@ -1,13 +1,25 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pytest
 from flask import Flask, session
+from flask_bootstrap import Bootstrap
+
 from routes import setup_routes
+from app import app  
+
 
 @pytest.fixture
 def client():
     """Set up a test client for the Flask app."""
-    app = Flask(__name__)
+    # app = Flask(__name__)
+    app = Flask(__name__, 
+            template_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates')),
+            static_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static')))
     app.config['TESTING'] = True
-    app.secret_key = 'test_secret_key'
+    Bootstrap(app)
+    app.secret_key = 'your_secret_key'
     setup_routes(app)
     with app.test_client() as client:
         yield client
@@ -16,12 +28,12 @@ def test_index_route(client):
     """Test the index route."""
     response = client.get('/')
     assert response.status_code == 200
-    assert b"index.html" in response.data
+    assert b"Welcome to the Trading App" in response.data
 
 def test_create_comparison_route(client):
     """Test creating a new comparison."""
     with client.session_transaction() as session:
-        session['ticker'] = 'AAPL'
+        session['ticker'] = 'ANZ.AX'
         session['start_date'] = '2022-01-01'
         session['end_date'] = '2022-12-31'
     response = client.post('/create_comparison', data={
@@ -30,7 +42,7 @@ def test_create_comparison_route(client):
         'normalise': 'on'
     })
     assert response.status_code == 200
-    assert b"comparison_page.html" in response.data
+    assert b"Manage Comparisons" in response.data
 
 def test_set_parameters_route(client):
     """Test setting parameters for a comparison."""
@@ -101,19 +113,19 @@ def test_comparison_results_route(client):
         }
     response = client.get('/comparison_results')
     assert response.status_code == 200
-    assert b"comparison_results.html" in response.data
+    assert b"Comparison Results" in response.data
 
 def test_manage_feature_sets_route(client):
     """Test the manage_feature_sets route."""
     response = client.get('/manage_feature_sets')
     assert response.status_code == 200
-    assert b"manage_feature_sets.html" in response.data
+    assert b"Manage Feature Sets" in response.data
 
 def test_set_ticker_and_dates_route(client):
     """Test setting ticker and dates."""
     response = client.post('/set_ticker_and_dates', data={
-        'category': 'us',
-        'ticker': 'AAPL',
+        'category': 'australian',
+        'ticker': 'ANZ.AX',
         'start_date': '2022-01-01',
         'end_date': '2022-12-31'
     })
@@ -121,6 +133,6 @@ def test_set_ticker_and_dates_route(client):
 
 def test_get_tickers_route(client):
     """Test fetching tickers by category."""
-    response = client.get('/get_tickers/us')
+    response = client.get('/get_tickers/australian')
     assert response.status_code == 200
-    assert b"AAPL" in response.data
+    assert b"ANZ" in response.data

@@ -50,7 +50,8 @@ def intcomma(value):
 # DEFAULT_LAG_PERIOD = 3
 # DEFAULT_FORECAST_PERIOD = 1
 FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\feature_sets.json"
-
+model_params_path = os.path.join(os.path.dirname(__file__), 'model_parameters.json')
+ 
 def setup_routes(app):
     """
     Set up all routes for the Flask application.
@@ -83,28 +84,6 @@ def setup_routes(app):
     # @app.route("/", methods=["GET", "POST"])
     @app.route("/")
     def index():
-        # if request.method == "POST":
-        #     print("In POST request")
-        #     session["category"] = request.form.get("category")
-        #     session["ticker"] = request.form.get("ticker")
-        #     session["start_date"] = request.form.get("start_date")
-        #     session["end_date"] = request.form.get("end_date")
-        #     session["data_type"] = "intraday" if request.form.get("use_lob_data") else "daily"
-        #     print("Creating StockData object")
-        #     stock_data = StockData(
-        #         session["data_type"],
-        #         session["ticker"],
-        #         session.get('start_date'),
-        #         session.get('end_date'),
-        #         load_data=True,
-        #         )
-        #     print("Saving StockData object to session")
-        #     session["stock_data"] = stock_data
-        #     print("Printing StockData object")
-        #     print(session["stock_data"].get_data().head())
-        #     print("Exiting POST request")
-        #     return redirect(url_for('comparison_page'))  # Redirect to a page with a "Load Data" button
-        # else:
         session.clear()
         category = session.get("category", "australian")
         tickers = get_tickers_by_category(category)
@@ -117,22 +96,6 @@ def setup_routes(app):
             session_end_date=session.get("end_date", DEFAULT_END_DATE),
             session=session, # Pass the session to the template if needed for LOB checkbox state
         )
-
-    # @app.route("/")
-    # def index():
-    #     # Clear session data when the user visits the home page
-    #     session.clear()
-
-    #     category = session.get("category", "australian")
-    #     tickers = get_tickers_by_category(category)
-    #     return render_template(
-    #         "index.html",
-    #         category=category,
-    #         tickers=tickers,
-    #         session_ticker=session.get("ticker"),
-    #         session_start_date=session.get("start_date", DEFAULT_START_DATE),  # Use default start date
-    #         session_end_date=session.get("end_date", DEFAULT_END_DATE),  # Use default end date
-    #     )
 
     @app.route('/create_comparison', methods=['POST'])
     def create_comparison():
@@ -161,7 +124,7 @@ def setup_routes(app):
         # forecast_period = int(forecast_period) if forecast_period.strip() else DEFAULT_FORECAST_PERIOD
 
         # Load full parameter metadata from model_parameters.json
-        with open('model_parameters.json') as f:
+        with open(model_params_path) as f:
             all_parameters = json.load(f)
         model_parameters = all_parameters.get(model, {})
 
@@ -195,7 +158,8 @@ def setup_routes(app):
         # ...existing code...
 
         # Reload the comparison page with updated comparisons
-        with open('model_parameters.json') as f:
+        print(model_params_path)
+        with open(model_params_path) as f:
             models = list(json.load(f).keys())  # Load model names from JSON
         # feature_sets = session.get('feature_sets', {})  # Load feature sets from session
         data_type = session.get('data_type', 'daily')  # Retrieve data type from session
@@ -623,7 +587,7 @@ def setup_routes(app):
         start_date = session.get('start_date')  # Use start_date from session
         end_date = session.get('end_date')  # Use end_date from session
         data_type = session.get('data_type')
-        stock_data = session.get('stock_data')
+        # stock_data = session.get('stock_data')
         
         if index==9999:
             print("Called from top button.")
@@ -794,6 +758,11 @@ def setup_routes(app):
                         if len(input_data_fields) < 2:
                             return "average function requires at least two input fields.", 400
                         feature_name = f"avg_{'_'.join(input_data_fields)}"
+                    elif function == 'rsi':
+                        if len(input_data_fields) != 1:
+                            return "create_rsi function requires exactly one input field.", 400
+                        window = function_parameters.get("window", 20)
+                        feature_name = f"{input_data_fields[0]}_rsi"
                     else:
                         return f"Unsupported function: {function}", 400
 

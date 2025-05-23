@@ -332,5 +332,168 @@
                 "num_lags": -10
             }
         }
+    },
+    "Cut Down Limit Order Book": {
+        "data_type": "intraday",
+        "features": [
+            {
+                "name": "bid_price_0",
+                "input_data_fields": [
+                    "bid_price_0"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "bid_volume_0",
+                "input_data_fields": [
+                    "bid_volume_0"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_price_0",
+                "input_data_fields": [
+                    "ask_price_0"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "ask_volume_0",
+                "input_data_fields": [
+                    "ask_volume_0"
+                ],
+                "function": "raw_data"
+            }
+        ],
+        "target": {
+            "input_data_fields": [
+                "mid_price"
+            ],
+            "function": "create_lagged_features",
+            "function_parameters": {
+                "num_lags": -10
+            }
+        }
+    },
+    "Technical Analysis - RSI": {
+        "data_type": "intraday",
+        "features": [
+            {
+                "name": "mid_price",
+                "input_data_fields": [
+                    "mid_price"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "rsi",
+                "input_data_fields": [
+                    "mid_price"
+                ],
+                "function": "create_rsi",
+                "function_parameters": {
+                    "window": 20
+                }
+            }
+        ],
+        "target": {
+            "input_data_fields": [
+                "mid_price"
+            ],
+            "function": "create_lagged_features",
+            "function_parameters": {
+                "num_lags": -10
+            }
+        }
+    },
+    "Technical Analysis - MACD": {
+        "data_type": "intraday",
+        "features": [
+            {
+                "name": "mid_price",
+                "input_data_fields": [
+                    "mid_price"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "macd",
+                "input_data_fields": [
+                    "mid_price"
+                ],
+                "function": "create_macd",
+                "function_parameters": {
+                    "window_slow": 26,
+                    "window_fast":12,
+                    "window_sign":9
+                }
+            }
+        ],
+        "target": {
+            "input_data_fields": [
+                "mid_price"
+            ],
+            "function": "create_lagged_features",
+            "function_parameters": {
+                "num_lags": -10
+            }
+        }
+    },
+    "Technical Analysis - Bollinger Bands": {
+        "data_type": "intraday",
+        "features": [
+            {
+                "name": "mid_price",
+                "input_data_fields": [
+                    "mid_price"
+                ],
+                "function": "raw_data"
+            },
+            {
+                "name": "bollinger_band_high",
+                "input_data_fields": [
+                    "mid_price"
+                ],
+                "function": "create_bb_high",
+                "function_parameters": {
+                    "window": 20
+                }
+            },
+            {
+                "name": "bollinger_band_mid",
+                "input_data_fields": [
+                    "mid_price"
+                ],
+                "function": "create_bb_mid",
+                "function_parameters": {
+                    "window": 20
+                }
+
+            },
+            {
+                "name": "bollinger_band_low",
+                "input_data_fields": [
+                    "mid_price"
+                ],
+                "function": "create_bb_low",
+                "function_parameters": {
+                    "window": 20
+                }
+            }
+        ],
+        "target": {
+            "input_data_fields": [
+                "mid_price"
+            ],
+            "function": "create_lagged_features",
+            "function_parameters": {
+                "num_lags": -10
+            }
+        }
+    },
+    "Test Set": {
+        "data_type": "daily",
+        "features": [],
+        "target": null
     }
 }
