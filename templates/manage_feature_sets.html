@@ -40,9 +40,11 @@
         <label for="function">Select Function</label>
         <select class="form-control" id="function" name="function">
             <option value="raw_data">Raw Data</option>
-            <option value="create_lagged_features">Create Lagged Features</option>
-            <option value="average">Average</option>
-            <option value="rsi">RSI</option>
+            <option value="create_lag">Lag</option>
+            <option value="create_average">Average</option>
+            <option value="create_rsi">RSI</option>
+            <option value="create_macd">MACD</option>
+            <option value="create_bb">Bollinger Bands</option>
         </select>
     </div>
 
@@ -124,8 +126,9 @@
 
     <hr>
     <button type="submit" class="btn btn-success" name="action" value="save">Save Feature Set</button>
-    <button type="submit" name="action" value="cancel" class="btn btn-secondary">Cancel</button>
+    <button type="submit" class="btn btn-secondary" name="action" value="cancel" >Cancel</button>
     <button type="submit" class="btn btn-danger" name="action" value="delete_set" onclick="return confirm('Are you sure you want to delete this feature set?');">Delete Feature Set</button>
+    <button type="submit" class="btn btn-success" name="action" value="exit">Exit</button>
 </form>
 
 <script>

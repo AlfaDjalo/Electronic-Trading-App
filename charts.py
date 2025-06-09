@@ -21,8 +21,8 @@ def create_chart(x_test_index, data, chart_type):
     Returns:
         str: Filepath of the saved chart image.
     """
-    print("Chart data:")
-    print(data)
+    # print("Chart data:")
+    # print(data)
     # Align lengths of x_test_index and data
     min_length = min(len(x_test_index), *[len(series) for series in data.values()])
     x_test_index = x_test_index[:min_length]
@@ -51,6 +51,7 @@ def create_chart(x_test_index, data, chart_type):
     fig, ax = plt.subplots(figsize=(15, 8))
     if chart_type == 'prediction':
         ax.plot(common_dates, data.pop('Actual'), label="Actual", linestyle='dashed')
+        # ax.plot(common_dates, data.pop('Actual'), label="Actual", linestyle='dashed', marker='D', markersize=5)
         for model_name, y_pred in data.items():
             ax.plot(common_dates, y_pred, label=f"Predicted ({model_name})")
         ax.set_title("Predictions vs Actual Values")

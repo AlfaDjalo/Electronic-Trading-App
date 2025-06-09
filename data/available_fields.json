@@ -33,5 +33,10 @@
             "ask_volume_4",
             "mid_price"
         ]
+    },
+    "test": {
+        "fields": [
+            "close"
+        ]
     }
 }

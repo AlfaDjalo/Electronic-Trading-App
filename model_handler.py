@@ -20,11 +20,17 @@ from tensorflow.keras.layers import Input, Conv1D, Flatten, Dense, Concatenate
 from alphaRNN import AlphaRNN
 from alphatRNN import AlphatRNN  # Import AlphaRNN and AlphatRNN modules
 
+from models import *
+# from models import Baseline, KerasLinearRegression, KerasLSTM, KerasCNN, KerasMLP
+
 class ModelHandler:
-    def __init__(self, data, params):
+    def __init__(self, data, params, verbose=False):
         self.data = data
         self.params = params
         self.model = None
+
+        self.verbose = verbose
+        # self.window_generator = window_generator
 
     def get_data(self):
         """Getter for ModelHandler data"""
@@ -41,6 +47,143 @@ class ModelHandler:
     def set_params(self, params):
         """Setter for ModelHandler data"""
         self.params = params
+
+    def baseline(self, window_generator, target):
+        """Model predicting no change - future price = current price."""
+        self.model = Baseline(target)
+        self.model.build_model(window_generator)
+        self.model.fit(window_generator)
+        # self.model = Baseline(window_generator, target)
+        # self.model = Baseline(label_index=self.data['train_df'])
+        # self.model.compile(loss=tf.keras.losses.MeanSquaredError(), metrics=[tf.keras.metrics.MeanAbsoluteError()])
+        # self.model.fit()
+
+        return
+
+    def keras_regression(self, window_generator, target):
+        """Perform simple regression."""
+        print("Running keras regression.")
+        self.model = KerasLinearRegression()
+        print("Initialized model.")
+        self.model.build_model(window_generator)
+        print("Built model.")
+        self.model.compile_model()
+        print("Compiled model.")
+        self.model.fit(window_generator)
+        print("Fit model.")
+
+        return
+
+    def keras_LSTM(self, window_generator, target):
+        """Perform LSTM regression."""
+        # Model parameters
+        lstm_units = self.params.get('num_units', {}).get('value', 64)
+        l1_reg = self.params.get('l1_reg', {}).get('value', 0.0)
+        seed = self.params.get('seed', {}).get('value', 0)
+        activation = self.params.get('activation', {}).get('value', 'tanh')
+
+        # Normalization parameters
+        use_batch_norm = self.params.get('use_batch_norm', {}).get('value', True)
+        use_layer_norm = self.params.get('use_layer_norm', {}).get('value', False)
+        dropout = self.params.get('dropout_rate').get('value', 0.2)
+        
+        # Fit parameters
+        loss = self.params.get('loss', {}).get('value', 'mean_squared_error')
+        optimizer = self.params.get('optimizer', {}).get('value', 'adam')
+        
+        # Training parameters
+        epochs = self.params.get('epochs', {}).get('value', 1000)
+        learning_rate = self.params.get('learning_rate', {}).get('value', 0.001)
+        early_stopping_patience = self.params.get('early_stopping_patience', {}).get('value', 25)
+        use_early_stopping = self.params.get('use_early_stopping', {}).get('value', True)
+
+        print("Running keras LSTM.")
+        self.model = KerasLSTM(
+            lstm_units=lstm_units,
+            dropout=dropout,
+            activation=activation,
+            l1_reg=l1_reg,
+            seed=seed,
+            loss=loss,
+            optimizer=optimizer,
+            use_batch_norm=use_batch_norm,
+            use_layer_norm=use_layer_norm
+        )
+        # self.model = KerasLSTM()
+        print("Initialized model.")
+        self.model.build_model(window_generator)
+        print("Built model.")
+        self.model.compile_model(optimizer=optimizer, loss=loss)
+        print("Compiled model.")
+        self.model.fit(window_generator, epochs=epochs, patience=early_stopping_patience)
+        print("Fit model.")
+
+        return
+
+    def keras_CNN(self, window_generator, target):
+        """Perform LSTM regression."""
+        # Model 
+        filters = self.params.get('filters', {}).get('value', 64)
+        kernel_size = self.params.get('kernel_size', {}).get('value', 3)
+        dense_layer = self.params.get('dense_layer', {}).get('value', 50)
+        
+        # Fit parameters
+        loss = self.params.get('loss', {}).get('value', 'mean_squared_error')
+        optimizer = self.params.get('optimizer', {}).get('value', 'adam')
+        
+        # # Training parameters
+        epochs = self.params.get('epochs', {}).get('value', 1000)
+        learning_rate = self.params.get('learning_rate', {}).get('value', 0.001)
+        early_stopping_patience = self.params.get('early_stopping_patience', {}).get('value', 25)
+        use_early_stopping = self.params.get('use_early_stopping', {}).get('value', True)
+
+        print("Running keras CNN.")
+        self.model = KerasCNN(
+            filters=filters,
+            kernel_size=kernel_size,
+            dense_layer=dense_layer
+        )
+        # self.model = KerasLSTM()
+        print("Initialized model.")
+        self.model.build_model(window_generator)
+        print("Built model.")
+        self.model.compile_model(optimizer=optimizer, loss=loss)
+        print("Compiled model.")
+        self.model.fit(window_generator, epochs=epochs, patience=early_stopping_patience)
+        print("Fit model.")
+
+        return
+
+    def keras_MLP(self, window_generator, target):
+        """Perform LSTM regression."""
+        # Model 
+        hidden_units = self.params.get('hidden_units', {}).get('value', [64, 32])
+        
+        # Fit parameters
+        loss = self.params.get('loss', {}).get('value', 'mean_squared_error')
+        optimizer = self.params.get('optimizer', {}).get('value', 'adam')
+        
+        # # Training parameters
+        epochs = self.params.get('epochs', {}).get('value', 1000)
+        learning_rate = self.params.get('learning_rate', {}).get('value', 0.001)
+        early_stopping_patience = self.params.get('early_stopping_patience', {}).get('value', 25)
+        use_early_stopping = self.params.get('use_early_stopping', {}).get('value', True)
+
+        print("Running keras MLP.")
+        self.model = KerasMLP(
+            hidden_units=hidden_units
+        )
+        # self.model = KerasLSTM()
+        print("Initialized model.")
+        self.model.build_model(window_generator)
+        print("Built model.")
+        self.model.compile_model(optimizer=optimizer, loss=loss)
+        print("Compiled model.")
+        self.model.fit(window_generator, epochs=epochs, patience=early_stopping_patience)
+        print("Fit model.")
+
+        return
+
 
     def regression(self):
         """Perform simple regression."""
@@ -131,15 +274,9 @@ class ModelHandler:
         loss = self.params.get('loss', {}).get('value', 'mean_squared_error')
         optimizer = self.params.get('optimizer', {}).get('value', 'adam')
         
-        print("num_units:", type(num_units), num_units)
-        print("l1_reg:", type(l1_reg), l1_reg)
-        print("seed:", type(seed), seed)
-        print("activation:", type(activation), activation)
-        
-        print("In model, parameters loaded")
         try:
             model = Sequential()
-            print("First add")
+            # print("First add")
             model.add(LSTM(
                 num_units,
                 activation=activation,
@@ -150,7 +287,7 @@ class ModelHandler:
                 input_shape=(self.data['x_train'].shape[1], 1),
                 unroll=True
             ))
-            print("Second add")
+            # print("Second add")
             model.add(Dense(
                 1,
                 kernel_initializer=keras.initializers.glorot_uniform(seed),
@@ -160,7 +297,7 @@ class ModelHandler:
         except Exception as e:
             print(f"Error during model.fit: {str(e)}")
             raise  # Re-raise the exception after logging it
-        print("In model, compiling model")
+        # print("In model, compiling model")
         model.compile(loss=loss, optimizer=optimizer)
         return model
 
@@ -250,21 +387,21 @@ class ModelHandler:
         """Train the model using the provided model function."""
         epochs = self.params.get('epochs', {}).get('value', 201)
         batch_size = self.params.get('batch_size', {}).get('value', 1000)
-        print("In model, parameters loaded")
+        # print("In model, parameters loaded")
 
         x_train = self.data['x_train'].values.reshape(self.data['x_train'].shape[0], self.data['x_train'].shape[1], 1)
         es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
-        print("In model, data transformed")
+        # print("In model, data transformed")
 
         self.model = model_function()
-        print("In model, model_function specified")
+        # print("In model, model_function specified")
 
         try:
             self.model.fit(x_train, self.data['y_train'], epochs=epochs, batch_size=batch_size, callbacks=[es], shuffle=False)
         except Exception as e:
-            print(f"Error during model.add: {str(e)}")
+            # print(f"Error during model.add: {str(e)}")
             raise  # Re-raise the exception after logging it
-        print("In model, model fit")
+        # print("In model, model fit")
 
         return
 
@@ -273,7 +410,7 @@ class ModelHandler:
         Define and return an improved CNN + FFNN model for LOB data.
         This model properly handles price and volume at each level as features.
         """
-        print("Entering lob cnn ffnn improved")
+        # print("Entering lob cnn ffnn improved")
 
         # For each level (bid and ask), we have both price and volume
         # So for each side (bid/ask), each level has 2 features
@@ -304,7 +441,7 @@ class ModelHandler:
         model = Model(inputs=[bid_input, ask_input], outputs=output, name="LOB_CNN_FFNN_Improved")
         model.compile(optimizer='adam', loss='mean_squared_error')
 
-        print("Exiting lob cnn ffnn improved")
+        # print("Exiting lob cnn ffnn improved")
         return model
 
     def lob_cnn(self):
@@ -312,7 +449,7 @@ class ModelHandler:
         Define and return an CNN + FFNN model for LOB data.
         This model properly handles price and volume at each level as features.
         """
-        print("Entering lob cnn")
+        # print("Entering lob cnn")
 
         # For each level (bid and ask), we have both price and volume
         # So for each side (bid/ask), each level has 2 features
@@ -343,7 +480,7 @@ class ModelHandler:
         model = Model(inputs=input, outputs=output, name="LOB_CNN")
         model.compile(optimizer='adam', loss='mean_squared_error')
 
-        print("Exiting lob cnn")
+        # print("Exiting lob cnn")
         return model
 
 
@@ -355,7 +492,7 @@ class ModelHandler:
         Returns:
             tuple: (bid_train, ask_train, target_train, bid_test, ask_test, target_test)
         """
-        print("Entering prepare lob data for cnn")
+        # print("Entering prepare lob data for cnn")
         if self.data is None:
             raise ValueError("No LOB data loaded.")
         
@@ -378,7 +515,7 @@ class ModelHandler:
         ask_volumes_train = self.data['x_train'][ask_volume_cols].values
         target_train = self.data['y_train'].values
 
-        print(bid_prices_train)
+        # print(bid_prices_train)
 
         # Prepare test data
         bid_prices_test = self.data['x_test'][bid_price_cols].values
@@ -391,7 +528,7 @@ class ModelHandler:
         n_train_samples = len(self.data['x_train'])
         n_test_samples = len(self.data['x_test'])
         
-        print("n_train_samples", n_train_samples)
+        # print("n_train_samples", n_train_samples)
 
         # Reshape train data
         bid_train = np.zeros((n_train_samples, 5, 2))  # [samples, levels, features(price,volume)]
@@ -402,7 +539,7 @@ class ModelHandler:
             ask_train[:, i, 0] = ask_prices_train[:, i]  # Price at level i
             ask_train[:, i, 1] = ask_volumes_train[:, i]  # Volume at level i
 
-        print(bid_train)
+        # print(bid_train)
 
         # Reshape test data
         bid_test = np.zeros((n_test_samples, 5, 2))  # [samples, levels, features(price,volume)]
@@ -412,7 +549,7 @@ class ModelHandler:
             bid_test[:, i, 1] = bid_volumes_test[:, i]  # Volume at level i
             ask_test[:, i, 0] = ask_prices_test[:, i]  # Price at level i
             ask_test[:, i, 1] = ask_volumes_test[:, i]  # Volume at level i
-        print("Exiting prepare lob data for cnn")        
+        # print("Exiting prepare lob data for cnn")        
         return bid_train, ask_train, target_train, bid_test, ask_test, target_test
 
     def prepare_cnn_input(self, input_series):
@@ -423,7 +560,7 @@ class ModelHandler:
         Returns:
             tuple: (x_train, x_test)
         """
-        print("Entering prepare cnn input")
+        # print("Entering prepare cnn input")
         if input_series is None:
             raise ValueError("No input data.")
         
@@ -463,7 +600,7 @@ class ModelHandler:
 
         x_series = np.concatenate((bid_series, ask_series), axis=1)
 
-        print("Exiting prepare cnn input")        
+        # print("Exiting prepare cnn input")        
 
         return x_series
 
@@ -480,7 +617,7 @@ class ModelHandler:
         Returns:
             history: Training history
         """
-        print("Entering train lob cnn")
+        # print("Entering train lob cnn")
         epochs = self.params.get('epochs', {}).get('value', 50)
         batch_size = self.params.get('batch_size', {}).get('value', 32)
         validation_split = self.params.get('validation_split', {}).get('value', 0.2)
@@ -495,14 +632,14 @@ class ModelHandler:
         # print("cnn_x_test")
         # print(cnn_x_test)
 
-        print("Exiting train lob cnn")
+        # print("Exiting train lob cnn")
 
         # return
 
         # bid_train, ask_train, target_train, bid_test, ask_test, target_test = self.prepare_lob_data_for_cnn()
 
         # bid_train, ask_train, target_train, bid_test, ask_test, target_test = self.prepare_lob_data_for_cnn()
-        print("In train_lob_cnn")
+        # print("In train_lob_cnn")
         # print(bid_train)
         # print(ask_train)
         # print(target_train)
@@ -543,6 +680,6 @@ class ModelHandler:
         # test_loss = self.model.evaluate([bid_test, ask_test], target_test, verbose=1)
         # print(f"Test Loss: {test_loss}")
         
-        print("Exiting train lob cnn")
+        # print("Exiting train lob cnn")
         # self.model = model
         return

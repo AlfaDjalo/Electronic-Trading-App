@@ -3,19 +3,25 @@ import numpy as np
 import json
 import ta
 
+from window_generator import WindowGenerator
+
 FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\feature_sets.json"
 
 class MLData:
-    def __init__(self, raw_data, train_percentage=0.8, feature_set=None, normalise=False):
+    def __init__(self, raw_data, train_percentage=0.8, val_percentage=0.1, feature_set=None, normalise=False, verbose=False):
         """
         Initialise MLData object.
 
         Args:
             raw_data (pd.DataFrame): DataFrame containing raw data (daily or intraday).
-            train_percentage (float): Percentage of data to use for training (0 < train_percentage < 1).
+            train_percentage (float): Fraction of data to use for training (0 < train_percentage < 1).
             feature_set (str): Feature set to apply.
             normalise (bool): Whether to normalise the input features.
         """
+        self.verbose = verbose
+        if self.verbose == True:
+            print("Initializing MLData object")
+
         if raw_data is None:
             raise ValueError("Raw data cannot be None. Ensure StockData is properly loaded.")
 
@@ -24,9 +30,10 @@ class MLData:
 
         self.data = raw_data.copy()
         self.train_percentage = train_percentage
+        self.val_percentage = val_percentage
+        self.feature_set = feature_set
         self.features = []
         self.target = None
-        self.feature_set = feature_set
         self.normalise = normalise
 
         self.x_train = None
@@ -36,7 +43,18 @@ class MLData:
 
         self.normalisation_params = {}  # Dictionary to store mean and std for each column
 
+        # Keras times series material
+        self.train_df = None
+        self.val_df = None
+        self.test_df = None        
+
         self.process_data()
+
+        # Keras times series material
+        self.window = WindowGenerator(input_width=3, label_width=1, shift=1, train_df=self.train_df, val_df=self.val_df, test_df=self.test_df, label_columns=[self.target])
+        # for example_inputs, example_labels in self.window.train.take(1):
+        #     print(f'Inputs shape (batch, time, features): {example_inputs.shape}')
+        #     print(f'Labels shape (batch, time, features): {example_labels.shape}')
 
     def __repr__(self):
         """
@@ -49,6 +67,9 @@ class MLData:
         """
         Process the data based on the feature set and apply transformations.
         """
+        if self.verbose == True:
+            print("Processing data.")
+
         try:
             if self.feature_set:
                 self.apply_feature_set(self.feature_set)
@@ -103,10 +124,124 @@ class MLData:
                 raise ValueError("Training dataset is empty. Check your feature and target creation.")
             if self.x_test.empty or self.y_test.empty:
                 raise ValueError("Testing dataset is empty. Check your feature and target creation.")
+
+            # Keras time series material
+            n = len(self.data)
+            required_columns = self.features + [self.target]
+            self.train_df = self.data[0:int(n*self.train_percentage)][required_columns]
+            self.val_df = self.data[int(n*self.train_percentage):int(n*(self.train_percentage + self.val_percentage))][required_columns]
+            self.test_df = self.data[int(n*(self.train_percentage + self.val_percentage)):][required_columns]
+
         except Exception as e:
             raise RuntimeError(f"Error during data splitting: {e}")
 
-    def create_lagged_features(self, input_field, num_lags=1, **kwargs):
+
+    def apply_feature_set(self, feature_set):
+        """
+        Apply a predefined feature set to the data.
+
+        Args:
+            feature_set (dict): Feature set configuration containing feature definitions.
+        """
+        if self.verbose == True:
+            print("Applying feature set.")
+
+        try:
+            # feature_set = self.load_feature_set()
+
+            if self.verbose == True:
+                print("Applying feature_set to features.")
+
+            for feature in feature_set.get("features", []):
+                name = feature["name"]
+                input_data_fields = feature["input_data_fields"]
+                function = feature.get("function", "raw_data")
+                # function = ["function"]
+                function_parameters = feature.get("function_parameters", {})
+
+                # print("Parameters loaded.")
+
+                # Ensure input_data_fields is a list and process each field
+                if not isinstance(input_data_fields, list):
+                    raise ValueError(f"input_data_fields for feature '{name}' must be a list.")
+
+                for field in input_data_fields:
+                    if field not in self.data.columns:
+                        raise ValueError(f"Field '{field}' is missing in the data.")
+
+                # Dynamically call the corresponding method
+                # print(f"Processing feature: {name}, fields: {input_data_fields}, function: {function}, params: {function_parameters}")
+                method = getattr(self, function, None)
+                if not method:
+                    raise ValueError(f"Unsupported function '{function}' in feature set. Ensure it is implemented in MLData.")
+
+                # Pass the list of fields as arguments to the method
+                if function_parameters:
+                    self.data[name] = method(input_data_fields, **function_parameters)
+                else:
+                    self.data[name] = method(input_data_fields)
+                # print(f"Feature '{name}' created successfully.")
+
+                self.features.append(name)
+
+            target = feature_set.get("target", {})
+            if target:
+                if self.verbose == True:
+                    print("Applying feature_set to target.")
+
+                name = "target"
+                input_data_fields = target["input_data_fields"]
+                function = target["function"]
+                function_parameters = target.get("function_parameters", {})
+
+                # Ensure input_data_fields is a list and process each field
+                if not isinstance(input_data_fields, list):
+                    raise ValueError(f"input_data_fields for '{name}' must be a list.")
+
+                for field in input_data_fields:
+                    if field not in self.data.columns:
+                        raise ValueError(f"Field '{field}' is missing in the data.")
+
+                # Dynamically call the corresponding method
+                # print(f"Processing target: fields: {input_data_fields}, function: {function}, params: {function_parameters}")
+                method = getattr(self, function, None)
+                if not method:
+                    raise ValueError(f"Unsupported function '{function}' in target configuration. Ensure it is implemented in MLData.")
+
+                # Pass the list of fields as arguments to the method
+                self.data[name] = method(input_data_fields, **function_parameters)
+                self.target = name
+                # print(f"Target '{name}' created successfully.")
+
+            self.data.dropna(inplace=True)
+        except Exception as e:
+            raise RuntimeError(f"Error applying feature set: {e}")
+
+    def get_feature_set(self):
+        """
+        Get the current feature set or feature set name.
+
+        Returns:
+            dict or str: The feature set dictionary if set, otherwise the feature set name.
+        """
+        return self.feature_set if self.feature_set else self.feature_set_name
+
+    def set_feature_set(self, feature_set=None, feature_set_name=None):
+        """
+        Set the feature set directly or by name.
+
+        Args:
+            feature_set (dict): The feature set dictionary to apply.
+            feature_set_name (str): The name of the feature set to load.
+        """
+        if feature_set and feature_set_name:
+            self.feature_set = feature_set
+            self.feature_set_name = feature_set_name
+        else:
+            raise ValueError("Either feature_set or feature_set_name must be provided.")
+        self.process_data()
+
+    def create_lag(self, input_field, num_lags=1, **kwargs):
         """
         Create lagged features for the specified input field.
 
@@ -352,8 +487,20 @@ class MLData:
             'x_train': self.x_train,
             'y_train': self.y_train,
             'x_test': self.x_test,
-            'y_test': self.y_test
+            'y_test': self.y_test, 
+            "train_df": self.train_df,
+            "val_df": self.val_df,
+            "test_df": self.test_df
         }
+
+    def get_window(self):
+        """
+        Get the window object.
+
+        Returns:
+            window: The window object for the data.
+        """
+        return self.window
 
     def get_normalisation_params(self, feature_name):
         """
@@ -396,95 +543,3 @@ class MLData:
             raise ValueError(f"Field '{input_field[0]}' is missing in the data.")
         return self.data[input_field[0]]
 
-    def apply_feature_set(self, feature_set):
-        """
-        Apply a predefined feature set to the data.
-
-        Args:
-            feature_set (dict): Feature set configuration containing feature definitions.
-        """
-        try:
-            # feature_set = self.load_feature_set()
-
-            for feature in feature_set.get("features", []):
-                name = feature["name"]
-                input_data_fields = feature["input_data_fields"]
-                function = feature["function"]
-                function_parameters = feature.get("function_parameters", {})
-
-                # Ensure input_data_fields is a list and process each field
-                if not isinstance(input_data_fields, list):
-                    raise ValueError(f"input_data_fields for feature '{name}' must be a list.")
-
-                for field in input_data_fields:
-                    if field not in self.data.columns:
-                        raise ValueError(f"Field '{field}' is missing in the data.")
-
-                # Dynamically call the corresponding method
-                # print(f"Processing feature: {name}, fields: {input_data_fields}, function: {function}, params: {function_parameters}")
-                method = getattr(self, function, None)
-                if not method:
-                    raise ValueError(f"Unsupported function '{function}' in feature set. Ensure it is implemented in MLData.")
-
-                # Pass the list of fields as arguments to the method
-                if function_parameters:
-                    self.data[name] = method(input_data_fields, **function_parameters)
-                else:
-                    self.data[name] = method(input_data_fields)
-                # print(f"Feature '{name}' created successfully.")
-
-                self.features.append(name)
-
-            target = feature_set.get("target", {})
-            if target:
-                name = "target"
-                input_data_fields = target["input_data_fields"]
-                function = target["function"]
-                function_parameters = target.get("function_parameters", {})
-
-                # Ensure input_data_fields is a list and process each field
-                if not isinstance(input_data_fields, list):
-                    raise ValueError(f"input_data_fields for '{name}' must be a list.")
-
-                for field in input_data_fields:
-                    if field not in self.data.columns:
-                        raise ValueError(f"Field '{field}' is missing in the data.")
-
-                # Dynamically call the corresponding method
-                # print(f"Processing target: fields: {input_data_fields}, function: {function}, params: {function_parameters}")
-                method = getattr(self, function, None)
-                if not method:
-                    raise ValueError(f"Unsupported function '{function}' in target configuration. Ensure it is implemented in MLData.")
-
-                # Pass the list of fields as arguments to the method
-                self.data[name] = method(input_data_fields, **function_parameters)
-                self.target = name
-                # print(f"Target '{name}' created successfully.")
-
-            self.data.dropna(inplace=True)
-        except Exception as e:
-            raise RuntimeError(f"Error applying feature set: {e}")
-
-    def get_feature_set(self):
-        """
-        Get the current feature set or feature set name.
-
-        Returns:
-            dict or str: The feature set dictionary if set, otherwise the feature set name.
-        """
-        return self.feature_set if self.feature_set else self.feature_set_name
-
-    def set_feature_set(self, feature_set=None, feature_set_name=None):
-        """
-        Set the feature set directly or by name.
-
-        Args:
-            feature_set (dict): The feature set dictionary to apply.
-            feature_set_name (str): The name of the feature set to load.
-        """
-        if feature_set and feature_set_name:
-            self.feature_set = feature_set
-            self.feature_set_name = feature_set_name
-        else:
-            raise ValueError("Either feature_set or feature_set_name must be provided.")
-        self.process_data()

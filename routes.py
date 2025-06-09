@@ -16,11 +16,14 @@ from datetime import date, datetime
 from babel.numbers import format_decimal
 
 # import app modules
-from models import ModelHandler
+from model_handler import ModelHandler
 from stock_data import StockData, DEFAULT_START_DATE, DEFAULT_END_DATE, LOB_FILEPATH
 from ml_data import MLData
 from feature_set import FeatureSetManager
 from charts import create_chart, TEMP_CHART_DIR
+# from window_generator import WindowGenerator
+
+DEBUG = False
 
 def is_date(value):
     """Check if a value is a date or datetime."""
@@ -158,7 +161,6 @@ def setup_routes(app):
         # ...existing code...
 
         # Reload the comparison page with updated comparisons
-        print(model_params_path)
         with open(model_params_path) as f:
             models = list(json.load(f).keys())  # Load model names from JSON
         # feature_sets = session.get('feature_sets', {})  # Load feature sets from session
@@ -370,60 +372,86 @@ def setup_routes(app):
 
         for comparison in comparisons:
             try:
+                # Load stock data
                 stock_data = StockData(
                     data_type,
                     ticker, 
                     session.get('start_date'), 
                     session.get('end_date'), 
-                    load_data=True, 
-                    # use_lob_data=session.get('use_lob_data', False)
+                    load_data=True,
+                    verbose=DEBUG
                 )
-                # if session.get('use_lob_data', False):
-                #     stock_data.merge_lob_with_stock_data()
 
+                # Load feature set
                 feature_set_name=comparison.get('feature_set_name', None)
 
+                # Create machine learning data
                 ml_data = MLData(
                     raw_data=stock_data.get_data(),
                     train_percentage=0.8,
-                    # feature_set_name=feature_set_name,
                     feature_set = feature_set_manager.get_feature_set(feature_set_name),
-                    normalise=comparison.get('normalise', False)  # Pass the normalise flag
+                    normalise=comparison.get('normalise', False),
+                    verbose=DEBUG
                 )
-                model_handler = ModelHandler(ml_data.get_data(), comparison.get('params', {}))
+
+                # Create model handler
+                model_handler = ModelHandler(ml_data.get_data(), comparison.get('params', {}), verbose=DEBUG)
                 model = comparison['model']
 
-                if model == 'LinearRegression':
-                    model_handler.regression()
+                if model == "Baseline":
+                    # model_handler.baseline(ml_data.get_target())
+                    model_handler.baseline(ml_data.get_window(), ml_data.get_target())
+                elif model == 'LinearRegression':
+                    model_handler.keras_regression(ml_data.get_window(), ml_data.get_target())
+                    # model_handler.regression()
                 elif model == 'RNN':
                     model_handler.ML(model_handler.simpleRNN_)
                 elif model == 'LSTM':
-                    model_handler.ML(model_handler.lstm_)
+                    model_handler.keras_LSTM(ml_data.get_window(), ml_data.get_target())
+                    # model_handler.ML(model_handler.lstm_)
                 elif model == 'GRU':
                     model_handler.ML(model_handler.gru_)
-                elif model == 'AlphaRNN':
-                    model_handler.ML(model_handler.alpharnn_)
-                elif model == 'AlphatRNN':
-                    model_handler.ML(model_handler.alphatrnn_)
+                # elif model == 'AlphaRNN':
+                #     model_handler.ML(model_handler.alpharnn_)
+                # elif model == 'AlphatRNN':
+                #     model_handler.ML(model_handler.alphatrnn_)
                 elif model == 'CNN':
-                    model_handler.train_lob_cnn()
+                    model_handler.keras_CNN(ml_data.get_window(), ml_data.get_target())
+                    # model_handler.train_lob_cnn()
                     # return redirect(url_for('comparison_results'))
+                elif model == 'MLP':
+                    model_handler.keras_MLP(ml_data.get_window(), ml_data.get_target())
 
-                if model == 'CNN':
-                    # print("Prediction")
+                print(model)
+                if model == 'CNN_old':
                     x_test = model_handler.prepare_cnn_input(ml_data.get_data()['x_test'])
-                    # print("x_test  shape: ", x_test.shape)
                     y_pred = model_handler.model.predict(x_test)
-                    # print("y_pred  shape: ", y_pred.shape)
+                    y_test = ml_data.get_data()['y_test'].values
+                elif model in ["Baseline", "LinearRegression", "LSTM", "CNN", "MLP"]:
+                    print(f"Predicting for {model} model.")
+                    # performance = model_handler.model.evaluate(ml_data.get_window().test, return_dict=True)
+                    test_inputs = np.concatenate([inputs.numpy() for inputs, labels in ml_data.get_window().test])
+                    y_pred = model_handler.model.predict(test_inputs)
+  
+                    # y_pred = model_handler.model.predict(inputs=ml_data.get_window().test)
+                    print("y_pred shape:", y_pred.shape)
+                    # y_test = ml_data.get_window().test.map(lambda inputs, labels: labels)
+                    y_test = np.concatenate([labels.numpy() for labels in ml_data.get_window().test.map(lambda inputs, labels: labels)])
+                    print("y_test shape:", y_test.shape)
+                    # y_pred = model_handler.model.predict(ml_data.get_data()['test_df'])
+
+                    # Reshape to 2D by removing last dimension
+                    y_pred = y_pred.reshape(y_pred.shape[0], -1)  # (1198, 3)
+                    y_test = y_test.reshape(y_test.shape[0], -1)  # (1198, 1)
+
+                    print("y_pred shape:", y_pred.shape)
+                    print("y_test shape:", y_test.shape)
+
                 else:
                     y_pred = model_handler.model.predict(ml_data.get_data()['x_test'])
-
-                # threshold = 93600
-                # indices = np.where(y_pred < threshold)[0]
-                # print(indices)
-                
-                # print(ml_data.get_data()['x_test'][1280:1300])
-                # print(y_pred[0:5])
+                    print("y_pred shape:", y_pred.shape)
+                    y_test = ml_data.get_data()['y_test'].values
+                    print("y_test shape:", y_test.shape)
 
                 # Reverse normalization for both predictions and actual values
                 if ml_data.get_normalise():
@@ -431,8 +459,8 @@ def setup_routes(app):
                     target_params = ml_data.get_normalisation_params(ml_data.get_target())
                     y_pred = (y_pred * target_params['std']) + target_params['mean']
                     y_test = (ml_data.get_data()['y_test'].values * target_params['std']) + target_params['mean']
-                else:
-                    y_test = ml_data.get_data()['y_test'].values
+                # else:
+                #     y_test = ml_data.get_data()['y_test'].values
 
                 if x_test_index is None:
                     x_test_index = ml_data.get_data()['x_test'].index
@@ -468,8 +496,6 @@ def setup_routes(app):
                 'prediction_chart': prediction_chart_path,
                 'error_chart': error_chart_path
             }
-            print(session['chart_paths'])
-            print(session['chart_paths']['prediction_chart'])
 
         # Store results in the session for rendering on the comparison_results page
         session['comparison_results'] = {
@@ -536,7 +562,7 @@ def setup_routes(app):
                     'feature_chart': feature_chart_path
                     }
             else:
-                print(session['chart_paths'])
+                # print(session['chart_paths'])
                 session['chart_paths']['feature_chart'] = feature_chart_path
     
             # {
@@ -549,7 +575,6 @@ def setup_routes(app):
             features = available_fields_data.get(data_type, {}).get("fields", [])
             feature = features[0]
 
-        print(features)
         chart_paths = session.get('chart_paths', {})
         return render_template(
             'view_charts.html',
@@ -590,11 +615,10 @@ def setup_routes(app):
         # stock_data = session.get('stock_data')
         
         if index==9999:
-            print("Called from top button.")
-            print(stock_data.get_data()[0:5])
+            # print("Called from top button.")
             return render_template('test_stock_data.html', data_preview=None, error_message='Not built yet.')
-        else:
-            print("Called from comparison.")
+        # else:
+            # print("Called from comparison.")
 
         comparisons = session.get('comparisons', [])
         if index >= len(comparisons):
@@ -653,12 +677,12 @@ def setup_routes(app):
 
         data_preview = None
         error_message = None
-        data_types = ['raw', 'x_train', 'x_test', 'y_train', 'y_test']  # Available data types
-        selected_data_type = request.args.get('data_type', data_types[0])  # Default to the first item
+        datasets = ['raw', 'x_train', 'x_test', 'y_train', 'y_test']  # Available data types
+        selected_dataset = request.args.get('dataset', datasets[0])  # Default to the first item
 
         try:
             # Retrieve processed data from the cache
-            data = pd.DataFrame(processed_data[selected_data_type])
+            data = pd.DataFrame(processed_data[selected_dataset])
 
             # Get the first and last five rows
             data_preview = {
@@ -672,8 +696,8 @@ def setup_routes(app):
             'test_stock_data.html',
             data_preview=data_preview,
             error_message=error_message,
-            data_types=data_types,
-            selected_data_type=selected_data_type  # Pass the selected item
+            datasets=datasets,
+            selected_dataset=selected_dataset  # Pass the selected item
         )
 
 
@@ -749,16 +773,16 @@ def setup_routes(app):
                         if len(input_data_fields) != 1:
                             return "raw_data function requires exactly one input field.", 400
                         feature_name = input_data_fields[0]
-                    elif function == 'create_lagged_features':
+                    elif function == 'create_lag':
                         if len(input_data_fields) != 1:
-                            return "create_lagged_features function requires exactly one input field.", 400
+                            return "create_lag function requires exactly one input field.", 400
                         num_lags = function_parameters.get("num_lags", 1)
                         feature_name = f"{input_data_fields[0]}_lagged_{num_lags}"
-                    elif function == 'average':
+                    elif function == 'create_average':
                         if len(input_data_fields) < 2:
-                            return "average function requires at least two input fields.", 400
+                            return "create_average function requires at least two input fields.", 400
                         feature_name = f"avg_{'_'.join(input_data_fields)}"
-                    elif function == 'rsi':
+                    elif function == 'create_rsi':
                         if len(input_data_fields) != 1:
                             return "create_rsi function requires exactly one input field.", 400
                         window = function_parameters.get("window", 20)
@@ -804,6 +828,11 @@ def setup_routes(app):
                     session['temp_feature_set'].pop(selected_feature_set, None)
                     return redirect(url_for('manage_feature_sets'))
 
+                elif action == 'exit':
+                    # Revert temporary changes by reloading the feature set from the JSON file
+                    session['temp_feature_set'].pop(selected_feature_set, None)
+                    return redirect(url_for('manage_feature_sets'))
+
             # Update the session with the temporary changes
             session['temp_feature_set'][selected_feature_set] = temp_feature_set
 
@@ -818,7 +847,7 @@ def setup_routes(app):
 
     @app.route('/add_feature_set', methods=['GET', 'POST'])
     def add_feature_set():
-        print("In add_feature_set")
+        # print("In add_feature_set")
         if request.method == 'POST':
             feature_set_name = request.form.get('feature_set_name')
 
@@ -929,6 +958,9 @@ def setup_routes(app):
         session["data_type"] = "intraday" if use_lob_data else "daily"  # Set data_type based on use_lob_data
         session["comparisons"] = []  # Clear comparisons when changing ticker or dates
 
+        if session["category"] == 'test':
+            session["data_type"] = 'test'
+        print(session["data_type"])
         return redirect(url_for("comparison_page"))
 
     @app.route('/get_tickers/<category>', methods=['GET'])
@@ -959,6 +991,8 @@ def setup_routes(app):
             tickers = [{'Code': 'AUDUSD=X', 'Company': 'AUDUSD'}]
         elif (category == 'crypto'):
             tickers = [{'Code': 'BTC-USD', 'Company': 'Bitcoin'}]
+        elif (category == 'test'):
+            tickers = [{'Code': 'flat', 'Company': 'Flat Co.'}, {'Code': 'ramp', 'Company': 'Ramp Co.'}, {'Code': 'wave', 'Company': 'Wave Co.'}]
         return tickers
 
 

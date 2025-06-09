@@ -7,11 +7,11 @@
     <h1>Test Stock Data</h1>
     <form method="get">
         <div class="mb-3">
-            <label for="data_type" class="form-label">Data Type</label>
-            <select class="form-select" id="data_type" name="data_type" onchange="this.form.submit()">
-                {% for data_type in data_types %}
-                    <option value="{{ data_type }}" {% if data_type == selected_data_type %}selected{% endif %}>
-                        {{ data_type }}
+            <label for="dataset" class="form-label">Data Type</label>
+            <select class="form-select" id="dataset" name="dataset" onchange="this.form.submit()">
+                {% for dataset in datasets %}
+                    <option value="{{ dataset }}" {% if dataset == selected_dataset %}selected{% endif %}>
+                        {{ dataset }}
                     </option>
                 {% endfor %}
             </select>
