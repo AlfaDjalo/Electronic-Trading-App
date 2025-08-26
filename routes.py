@@ -14,6 +14,7 @@ from io import BytesIO
 from flask_caching import Cache
 from datetime import date, datetime
 from babel.numbers import format_decimal
+import requests
 
 # import app modules
 from model_handler import ModelHandler
@@ -65,6 +66,8 @@ def setup_routes(app):
     app.secret_key = 'your_secret_key'  # Add a secret key for session management
     comparison_counter = 1  # Initialize a counter for generating unique names
 
+    
+    # Your normal route logic here
     # Initialize cache
     cache = Cache(config={'CACHE_TYPE': 'SimpleCache'})
     cache.init_app(app)
@@ -395,39 +398,53 @@ def setup_routes(app):
                 )
 
                 # Create model handler
-                model_handler = ModelHandler(ml_data.get_data(), comparison.get('params', {}), verbose=DEBUG)
+                model_handler = ModelHandler(ml_data.get_data(), params=comparison.get('params', {}), window_generator=ml_data.get_window(), target=ml_data.get_target(), verbose=DEBUG)
                 model = comparison['model']
 
-                if model == "Baseline":
-                    # model_handler.baseline(ml_data.get_target())
-                    model_handler.baseline(ml_data.get_window(), ml_data.get_target())
-                elif model == 'LinearRegression':
-                    model_handler.keras_regression(ml_data.get_window(), ml_data.get_target())
-                    # model_handler.regression()
-                elif model == 'RNN':
-                    model_handler.ML(model_handler.simpleRNN_)
-                elif model == 'LSTM':
-                    model_handler.keras_LSTM(ml_data.get_window(), ml_data.get_target())
-                    # model_handler.ML(model_handler.lstm_)
-                elif model == 'GRU':
-                    model_handler.ML(model_handler.gru_)
-                # elif model == 'AlphaRNN':
-                #     model_handler.ML(model_handler.alpharnn_)
-                # elif model == 'AlphatRNN':
-                #     model_handler.ML(model_handler.alphatrnn_)
-                elif model == 'CNN':
-                    model_handler.keras_CNN(ml_data.get_window(), ml_data.get_target())
-                    # model_handler.train_lob_cnn()
-                    # return redirect(url_for('comparison_results'))
-                elif model == 'MLP':
-                    model_handler.keras_MLP(ml_data.get_window(), ml_data.get_target())
+                model_handler.run_keras_model(model)
 
-                print(model)
+                # if model == "Baseline":
+                #     # model_handler.baseline(ml_data.get_target())
+                #     model_handler.baseline(ml_data.get_window(), ml_data.get_target())
+                # elif model == 'LinearRegression':
+                #     model_handler.keras_regression(ml_data.get_window(), ml_data.get_target())
+                #     # model_handler.regression()
+                # elif model == 'RNN':
+                #     model_handler.ML(model_handler.simpleRNN_)
+                # elif model == 'LSTM':
+                #     model_handler.keras_LSTM(ml_data.get_window(), ml_data.get_target())
+                #     # model_handler.ML(model_handler.lstm_)
+                # elif model == 'GRU':
+                #     model_handler.ML(model_handler.gru_)
+                # # elif model == 'AlphaRNN':
+                # #     model_handler.ML(model_handler.alpharnn_)
+                # # elif model == 'AlphatRNN':
+                # #     model_handler.ML(model_handler.alphatrnn_)
+                # elif model == 'CNN':
+                #     model_handler.keras_CNN(ml_data.get_window(), ml_data.get_target())
+                #     # model_handler.train_lob_cnn()
+                #     # return redirect(url_for('comparison_results'))
+                # elif model == 'MLP':
+                #     model_handler.keras_MLP(ml_data.get_window(), ml_data.get_target())
+
+                print(f"Predicting for {model}")
+
+                # print_session_size(session)
+
+                # print("Current session keys:", list(session.keys()))
+                # print("Session size:", len(str(session)))
+
+                # json_size = len(json.dumps(dict(session), default=str).encode('utf-8'))
+                # print(f"JSON serialized size: {json_size} bytes")
+
+                # estimated_cookie_size = int(json_size * 1.4)  # Account for encoding overhead
+                # print(f"Estimated cookie size: {estimated_cookie_size} bytes")
+
                 if model == 'CNN_old':
                     x_test = model_handler.prepare_cnn_input(ml_data.get_data()['x_test'])
                     y_pred = model_handler.model.predict(x_test)
                     y_test = ml_data.get_data()['y_test'].values
-                elif model in ["Baseline", "LinearRegression", "LSTM", "CNN", "MLP"]:
+                elif model in ["baseline", "keras_regression", "keras_LSTM", "keras_CNN", "keras_MLP"]:
                     print(f"Predicting for {model} model.")
                     # performance = model_handler.model.evaluate(ml_data.get_window().test, return_dict=True)
                     test_inputs = np.concatenate([inputs.numpy() for inputs, labels in ml_data.get_window().test])
@@ -468,6 +485,7 @@ def setup_routes(app):
                 predictions[comparison['name']] = y_pred
                 errors[comparison['name']] = y_test - y_pred
 
+
                 results.append({
                     'name': comparison['name'],
                     'model': model,
@@ -475,6 +493,7 @@ def setup_routes(app):
                     'error': 'N/A'
                 })
             except ValueError as e:
+                print(f"❌ DATA ERROR: {str(e)}")
                 results.append({
                     'name': comparison['name'],
                     'model': comparison['model'],
@@ -482,6 +501,7 @@ def setup_routes(app):
                     'error': f"Data Error: {str(e)}"
                 })
             except Exception as e:
+                print(f"❌ CHART ERROR: {str(e)}")
                 results.append({
                     'name': comparison['name'],
                     'model': comparison['model'],
@@ -497,6 +517,10 @@ def setup_routes(app):
                 'error_chart': error_chart_path
             }
 
+        # print(results)
+        # results_size = len(json.dumps(results, default=str).encode('utf-8'))
+        # print(f"🔍 Results data size: {results_size} bytes")
+        
         # Store results in the session for rendering on the comparison_results page
         session['comparison_results'] = {
             'results': results,
@@ -980,11 +1004,20 @@ def setup_routes(app):
     def get_tickers_by_category(category):
         # Helper function to fetch tickers based on category
         tickers = []
+
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+
         if (category == 'australian'):
-            asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
+            url = "https://en.wikipedia.org/wiki/S%26P/ASX_200"
+            response = requests.get(url, headers=headers)
+            asx200 = pd.read_html(response.text)[2]
+            # asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
             tickers = asx200[['Code', 'Company']].to_dict(orient="records")
         elif (category == 'us'):
-            sp500 = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
+            url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+            response = requests.get(url, headers=headers)
+            sp500 = pd.read_html(response.text)[0]
+            # sp500 = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
             sp500['Symbol'] = sp500['Symbol'].str.replace('.', '-')
             tickers = sp500[['Symbol', 'Security']].rename(columns={'Symbol': 'Code', 'Security': 'Company'}).to_dict(orient="records")
         elif (category == 'fx'):
@@ -997,3 +1030,13 @@ def setup_routes(app):
 
 
 AVAILABLE_FIELDS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\available_fields.json"  # Add this line
+
+def print_session_size(session):
+    print("Current session keys:", list(session.keys()))
+    print("Session size:", len(str(session)))
+
+    json_size = len(json.dumps(dict(session), default=str).encode('utf-8'))
+    print(f"JSON serialized size: {json_size} bytes")
+
+    estimated_cookie_size = int(json_size * 1.4)  # Account for encoding overhead
+    print(f"Estimated cookie size: {estimated_cookie_size} bytes")

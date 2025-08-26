@@ -24,13 +24,15 @@ from models import *
 # from models import Baseline, KerasLinearRegression, KerasLSTM, KerasCNN, KerasMLP
 
 class ModelHandler:
-    def __init__(self, data, params, verbose=False):
+    def __init__(self, data, params, window_generator, target, verbose=False):
         self.data = data
         self.params = params
         self.model = None
 
         self.verbose = verbose
-        # self.window_generator = window_generator
+
+        self.window_generator = window_generator
+        self.target = target
 
     def get_data(self):
         """Getter for ModelHandler data"""
@@ -48,11 +50,21 @@ class ModelHandler:
         """Setter for ModelHandler data"""
         self.params = params
 
-    def baseline(self, window_generator, target):
+    def run_keras_model(self, model_name):
+
+        method = getattr(self, model_name, None)
+        function_parameters = None
+
+        if function_parameters:
+            method(**function_parameters)
+        else:
+            method()
+
+    def baseline(self):
         """Model predicting no change - future price = current price."""
-        self.model = Baseline(target)
-        self.model.build_model(window_generator)
-        self.model.fit(window_generator)
+        self.model = Baseline(self.target)
+        self.model.build_model(self.window_generator)
+        self.model.fit(self.window_generator)
         # self.model = Baseline(window_generator, target)
         # self.model = Baseline(label_index=self.data['train_df'])
         # self.model.compile(loss=tf.keras.losses.MeanSquaredError(), metrics=[tf.keras.metrics.MeanAbsoluteError()])
@@ -60,21 +72,21 @@ class ModelHandler:
 
         return
 
-    def keras_regression(self, window_generator, target):
+    def keras_regression(self):
         """Perform simple regression."""
         print("Running keras regression.")
         self.model = KerasLinearRegression()
         print("Initialized model.")
-        self.model.build_model(window_generator)
+        self.model.build_model(self.window_generator)
         print("Built model.")
         self.model.compile_model()
         print("Compiled model.")
-        self.model.fit(window_generator)
+        self.model.fit(self.window_generator)
         print("Fit model.")
 
         return
 
-    def keras_LSTM(self, window_generator, target):
+    def keras_LSTM(self):
         """Perform LSTM regression."""
         # Model parameters
         lstm_units = self.params.get('num_units', {}).get('value', 64)
@@ -111,16 +123,16 @@ class ModelHandler:
         )
         # self.model = KerasLSTM()
         print("Initialized model.")
-        self.model.build_model(window_generator)
+        self.model.build_model(self.window_generator)
         print("Built model.")
         self.model.compile_model(optimizer=optimizer, loss=loss)
         print("Compiled model.")
-        self.model.fit(window_generator, epochs=epochs, patience=early_stopping_patience)
+        self.model.fit(self.window_generator, epochs=epochs, patience=early_stopping_patience)
         print("Fit model.")
 
         return
 
-    def keras_CNN(self, window_generator, target):
+    def keras_CNN(self):
         """Perform LSTM regression."""
         # Model 
         filters = self.params.get('filters', {}).get('value', 64)
@@ -145,16 +157,16 @@ class ModelHandler:
         )
         # self.model = KerasLSTM()
         print("Initialized model.")
-        self.model.build_model(window_generator)
+        self.model.build_model(self.window_generator)
         print("Built model.")
         self.model.compile_model(optimizer=optimizer, loss=loss)
         print("Compiled model.")
-        self.model.fit(window_generator, epochs=epochs, patience=early_stopping_patience)
+        self.model.fit(self.window_generator, epochs=epochs, patience=early_stopping_patience)
         print("Fit model.")
 
         return
 
-    def keras_MLP(self, window_generator, target):
+    def keras_MLP(self):
         """Perform LSTM regression."""
         # Model 
         hidden_units = self.params.get('hidden_units', {}).get('value', [64, 32])
@@ -175,11 +187,11 @@ class ModelHandler:
         )
         # self.model = KerasLSTM()
         print("Initialized model.")
-        self.model.build_model(window_generator)
+        self.model.build_model(self.window_generator)
         print("Built model.")
         self.model.compile_model(optimizer=optimizer, loss=loss)
         print("Compiled model.")
-        self.model.fit(window_generator, epochs=epochs, patience=early_stopping_patience)
+        self.model.fit(self.window_generator, epochs=epochs, patience=early_stopping_patience)
         print("Fit model.")
 
         return

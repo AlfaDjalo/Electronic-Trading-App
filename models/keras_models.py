@@ -200,8 +200,11 @@ class KerasMLP(BaseKerasModel):
         num_labels = len(window_generator.label_columns) if window_generator.label_columns else 1
         output_size = window_generator.label_width * num_labels
 
-        layers = [tf.keras.layers.Flatten(input_shape=input_shape)]
-        
+        layers = [
+            tf.keras.layers.Input(shape=input_shape),
+            tf.keras.layers.Flatten()
+        ]
+
         for units in self.hidden_units:
             layers.extend([
                 tf.keras.layers.Dense(units, activation='relu'),
@@ -240,6 +243,8 @@ class KerasLSTM(BaseKerasModel):
         # Input normalization (optional - good for time series)
         layers.append(tf.keras.layers.BatchNormalization(name='input_norm'))
         
+        tf.keras.layers.Input(shape=input_shape),
+
         # LSTM layer
         layers.append(tf.keras.layers.LSTM(
             self.lstm_units, 
@@ -249,7 +254,6 @@ class KerasLSTM(BaseKerasModel):
             bias_initializer=tf.keras.initializers.GlorotUniform(seed=self.seed),
             recurrent_initializer=tf.keras.initializers.Orthogonal(seed=self.seed),
             kernel_regularizer=tf.keras.regularizers.l1(self.l1_reg),
-            input_shape=input_shape,
             unroll=True,
             return_sequences=False  # Set to True if you want normalization after LSTM
         ))
@@ -310,8 +314,10 @@ class KerasCNN(BaseKerasModel):
         output_size = window_generator.label_width * num_labels
 
         self.model = tf.keras.Sequential([
+
+            tf.keras.layers.Input(shape=input_shape),
             tf.keras.layers.Conv1D(filters=self.filters, kernel_size=self.kernel_size,
-                                activation='relu', input_shape=input_shape),
+                                activation='relu'),
             tf.keras.layers.GlobalMaxPooling1D(),
             tf.keras.layers.Dense(self.dense_layer, activation='relu'),
             tf.keras.layers.Dense(output_size, name='cnn_output')

@@ -1,11 +1,13 @@
 {
-    "Baseline":{
+    "baseline":{
     },
-    "LinearRegression": {
+    "keras_regression": {
     },
-    "MLP": {
+    "keras_MLP": {
     },
-    "LSTM": {
+    "keras_CNN": {
+    },
+    "keras_LSTM": {
         "num_units": {
             "type": "integer",
             "default": 64,

@@ -1,0 +1,313 @@
+import React, { useState, useRef } from 'react';
+import './DataUpload.css';
+
+const DataUpload = ({ onUploadSuccess, onUploadError }) => {
+  // STATE MANAGEMENT
+  // selectedFile: stores the file object when user selects a file
+  const [selectedFile, setSelectedFile] = useState(null);
+  
+  // uploadStatus: tracks the current state of the upload process
+  // 'idle' = no upload in progress, 'uploading' = file being sent, 
+  // 'success' = upload completed, 'error' = something went wrong
+  const [uploadStatus, setUploadStatus] = useState('idle');
+  
+  // errorMessage: stores any error messages to display to user
+  const [errorMessage, setErrorMessage] = useState('');
+  
+  // uploadProgress: tracks upload percentage (0-100)
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
+  // useRef creates a reference to the hidden file input element
+  // This allows us to trigger the file picker programmatically
+  const fileInputRef = useRef(null);
+
+  // FILE VALIDATION FUNCTION
+  // This runs on the client side before uploading to catch obvious issues early
+  const validateFile = (file) => {
+    // Check if a file was actually selected
+    if (!file) {
+      return "Please select a file";
+    }
+
+    // Validate file type - only allow CSV files
+    // file.type might be empty on some systems, so we also check the extension
+    if (file.type !== 'text/csv' && !file.name.toLowerCase().endsWith('.csv')) {
+      return "Please select a CSV file";
+    }
+
+    // Check file size - prevent huge files that might crash the browser/server
+    // 10MB limit (10 * 1024 * 1024 bytes)
+    const maxSize = 10 * 1024 * 1024; 
+    if (file.size > maxSize) {
+      return "File size must be less than 10MB";
+    }
+
+    // File passed all validation checks
+    return null;
+  };
+
+  // FILE SELECTION HANDLER
+  // Called when user selects a file through the file input or drag & drop
+  const handleFileSelect = (file) => {
+    // Validate the selected file
+    const validationError = validateFile(file);
+    if (validationError) {
+      setErrorMessage(validationError);
+      setSelectedFile(null);
+      setUploadStatus('error');
+      return;
+    }
+
+    // File is valid, store it and clear any previous errors
+    setSelectedFile(file);
+    setErrorMessage('');
+    setUploadStatus('idle');
+    setUploadProgress(0);
+  };
+
+  // FILE INPUT CHANGE HANDLER
+  // Triggered when user uses the file picker dialog
+  const handleFileInputChange = (event) => {
+    const file = event.target.files[0]; // Get the first (and only) selected file
+    handleFileSelect(file);
+  };
+
+  // DRAG AND DROP HANDLERS
+  // These provide a more modern UX for file selection
+  
+  const handleDragOver = (event) => {
+    event.preventDefault(); // Prevent default behavior (opening file in browser)
+    event.stopPropagation();
+  };
+
+  const handleDragEnter = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleDragLeave = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Get the dropped files
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      handleFileSelect(files[0]); // Only take the first file
+    }
+  };
+
+  // UPLOAD FUNCTION
+  // This sends the file to your Python backend API
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setErrorMessage("Please select a file first");
+      return;
+    }
+
+    // Update status to show upload is starting
+    setUploadStatus('uploading');
+    setErrorMessage('');
+    setUploadProgress(0);
+
+    try {
+      // Create FormData object to send file as multipart/form-data
+      // This is the standard way to upload files via HTTP
+      const formData = new FormData();
+      formData.append('file', selectedFile); // 'file' is the key your Python API will look for
+
+      // Create XMLHttpRequest to track upload progress
+      // fetch() doesn't support upload progress tracking
+      const xhr = new XMLHttpRequest();
+
+      // Set up progress tracking
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = (event.loaded / event.total) * 100;
+          setUploadProgress(Math.round(percentComplete));
+        }
+      });
+
+      // Set up the response handlers
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          // Success! Parse the JSON response
+          const response = JSON.parse(xhr.responseText);
+          setUploadStatus('success');
+          setUploadProgress(100);
+          
+          // Call the parent component's success handler with the results
+          // This is how we pass the optimization results up to the main app
+          if (onUploadSuccess) {
+            onUploadSuccess(response);
+          }
+        } else {
+          // HTTP error status
+          setUploadStatus('error');
+          setErrorMessage(`Upload failed: ${xhr.status} ${xhr.statusText}`);
+          
+          if (onUploadError) {
+            onUploadError(`Upload failed: ${xhr.status} ${xhr.statusText}`);
+          }
+        }
+      };
+
+      xhr.onerror = function() {
+        // Network error
+        setUploadStatus('error');
+        setErrorMessage('Network error occurred during upload');
+        
+        if (onUploadError) {
+          onUploadError('Network error occurred during upload');
+        }
+      };
+
+      // Send the request to your Python API
+      // TODO: Replace with your actual API endpoint URL
+      xhr.open('POST', 'http://localhost:5000/api/upload-csv');
+      xhr.send(formData);
+
+    } catch (error) {
+      // Unexpected error
+      console.error('Upload error:', error);
+      setUploadStatus('error');
+      setErrorMessage('An unexpected error occurred');
+      
+      if (onUploadError) {
+        onUploadError('An unexpected error occurred');
+      }
+    }
+  };
+
+  // CLEAR SELECTION FUNCTION
+  // Allows user to start over with a different file
+  const handleClear = () => {
+    setSelectedFile(null);
+    setUploadStatus('idle');
+    setErrorMessage('');
+    setUploadProgress(0);
+    
+    // Clear the file input value
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // FORMAT FILE SIZE FOR DISPLAY
+  // Converts bytes to human-readable format
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // COMPONENT RENDER
+  return (
+    <div className="data-upload">
+      <h2>Upload Portfolio Data</h2>
+      <p>Select a CSV file containing time series returns for your assets</p>
+
+      {/* DRAG & DROP AREA */}
+      <div 
+        className={`upload-area ${uploadStatus === 'uploading' ? 'uploading' : ''}`}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()} // Click to open file picker
+      >
+        {/* HIDDEN FILE INPUT */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileInputChange}
+          accept=".csv"
+          style={{ display: 'none' }}
+        />
+
+        {/* UPLOAD AREA CONTENT */}
+        {!selectedFile ? (
+          <div className="upload-prompt">
+            <div className="upload-icon">📁</div>
+            <p>Click to select a CSV file or drag and drop here</p>
+            <p className="upload-hint">Maximum file size: 10MB</p>
+          </div>
+        ) : (
+          <div className="file-selected">
+            <div className="file-icon">📄</div>
+            <div className="file-info">
+              <p className="file-name">{selectedFile.name}</p>
+              <p className="file-size">{formatFileSize(selectedFile.size)}</p>
+            </div>
+            <button 
+              className="clear-button"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent triggering the file picker
+                handleClear();
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* UPLOAD PROGRESS BAR */}
+      {uploadStatus === 'uploading' && (
+        <div className="progress-container">
+          <div className="progress-bar">
+            <div 
+              className="progress-fill"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+          </div>
+          <p>Uploading... {uploadProgress}%</p>
+        </div>
+      )}
+
+      {/* ERROR MESSAGE DISPLAY */}
+      {uploadStatus === 'error' && errorMessage && (
+        <div className="error-message">
+          <span className="error-icon">⚠️</span>
+          {errorMessage}
+        </div>
+      )}
+
+      {/* SUCCESS MESSAGE */}
+      {uploadStatus === 'success' && (
+        <div className="success-message">
+          <span className="success-icon">✅</span>
+          File uploaded and processed successfully!
+        </div>
+      )}
+
+      {/* ACTION BUTTONS */}
+      <div className="button-container">
+        <button 
+          className="upload-button"
+          onClick={handleUpload}
+          disabled={!selectedFile || uploadStatus === 'uploading'}
+        >
+          {uploadStatus === 'uploading' ? 'Processing...' : 'Upload & Optimize'}
+        </button>
+
+        {selectedFile && uploadStatus !== 'uploading' && (
+          <button 
+            className="clear-button-secondary"
+            onClick={handleClear}
+          >
+            Choose Different File
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DataUpload;
