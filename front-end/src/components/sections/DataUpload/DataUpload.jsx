@@ -109,6 +109,20 @@ const DataUpload = ({ onUploadSuccess, onUploadError }) => {
       return;
     }
 
+    // Test from ChatGPT
+    async function uploadCSV(file) {
+      const formData = new FormData();
+      formData.append("file", file); // key MUST match Flask: "file"
+
+      const res = await fetch("http://localhost:5000/api/upload-csv", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      console.log("Upload result:", data);
+    }
+
     // Update status to show upload is starting
     setUploadStatus('uploading');
     setErrorMessage('');
@@ -168,7 +182,7 @@ const DataUpload = ({ onUploadSuccess, onUploadError }) => {
 
       // Send the request to your Python API
       // TODO: Replace with your actual API endpoint URL
-      xhr.open('POST', 'http://localhost:5000/api/upload-csv');
+      xhr.open('POST', 'http://localhost:5000/api/upload-csv', true);
       xhr.send(formData);
 
     } catch (error) {
@@ -211,7 +225,7 @@ const DataUpload = ({ onUploadSuccess, onUploadError }) => {
   return (
     <div className="data-upload">
       <h2>Upload Portfolio Data</h2>
-      <p>Select a CSV file containing time series returns for your assets</p>
+      <p>Select a CSV file containing time series returns for your features</p>
 
       {/* DRAG & DROP AREA */}
       <div 
@@ -294,7 +308,7 @@ const DataUpload = ({ onUploadSuccess, onUploadError }) => {
           onClick={handleUpload}
           disabled={!selectedFile || uploadStatus === 'uploading'}
         >
-          {uploadStatus === 'uploading' ? 'Processing...' : 'Upload & Optimize'}
+          {uploadStatus === 'uploading' ? 'Processing...' : 'Upload'}
         </button>
 
         {selectedFile && uploadStatus !== 'uploading' && (

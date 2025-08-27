@@ -9,7 +9,7 @@ DEFAULT_START_DATE = '2014-12-31'
 DEFAULT_END_DATE = '2024-12-31'
 
 # Global variable for LOB data filepath
-LOB_FILEPATH = "lob_data/order_book_history.csv"
+LOB_FILEPATH = "../data/order_book_history.csv"
 
 class StockData:
     """

@@ -53,7 +53,7 @@ def intcomma(value):
 # Global constants for default values
 # DEFAULT_LAG_PERIOD = 3
 # DEFAULT_FORECAST_PERIOD = 1
-FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\feature_sets.json"
+FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\electronic_trading_app\\back-end\\data\\feature_sets.json"
 model_params_path = os.path.join(os.path.dirname(__file__), 'model_parameters.json')
  
 def setup_routes(app):
@@ -725,7 +725,7 @@ def setup_routes(app):
         )
 
 
-    AVAILABLE_FIELDS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\available_fields.json"
+    AVAILABLE_FIELDS_FILE = "c:\\Users\\David\\Projects\\electronic_trading_app\\back-end\\data\\available_fields.json"
 
     def load_available_fields():
         """
@@ -1027,7 +1027,6 @@ def setup_routes(app):
         elif (category == 'test'):
             tickers = [{'Code': 'flat', 'Company': 'Flat Co.'}, {'Code': 'ramp', 'Company': 'Ramp Co.'}, {'Code': 'wave', 'Company': 'Wave Co.'}]
         return tickers
-
 
 AVAILABLE_FIELDS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\available_fields.json"  # Add this line
 
