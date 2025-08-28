@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export const SelectModel = ({
   modelNames,
@@ -37,7 +38,7 @@ export const SelectModel = ({
         <div>
           <label className="block mb-1">Model</label>
           <select
-            className="border rounded p-2 w-full text-black bg-white"
+            className="border rounded p-2 w-auto min-w-[12rem] max-w-xs text-black bg-white"
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
           >
@@ -53,7 +54,7 @@ export const SelectModel = ({
         <div>
           <label className="block mb-1">Feature Set</label>
           <select
-            className="border rounded p-2 w-full text-black bg-white"
+            className="border rounded p-2 w-auto min-w-[12rem] max-w-xs text-black bg-white"
             value={selectedFeatureSet}
             onChange={(e) => setSelectedFeatureSet(e.target.value)}
           >
@@ -106,6 +107,12 @@ export const SelectModel = ({
                 <td className="border p-2">{m.normalise ? "Yes" : "No"}</td>
                 <td className="border p-2 space-x-2">
                   <button
+                    className="bg-blue-700 text-white px-2 py-1 rounded border border-blue-900"
+                    onClick={() => onSetParameters?.(m)}
+                  >
+                    Set Parameters
+                  </button>
+                  <button
                     className="bg-blue-500 text-white px-2 py-1 rounded border border-blue-700"
                     onClick={() => onEdit?.(m)}
                   >
@@ -116,12 +123,6 @@ export const SelectModel = ({
                     onClick={() => onDelete?.(m.id)}
                   >
                     Delete
-                  </button>
-                  <button
-                    className="bg-blue-700 text-white px-2 py-1 rounded border border-blue-900"
-                    onClick={() => onSetParameters?.(m)}
-                  >
-                    Set Parameters
                   </button>
                 </td>
               </tr>

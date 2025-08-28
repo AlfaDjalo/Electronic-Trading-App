@@ -1,35 +1,43 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useState } from "react";
-import { Navbar } from "./components/Navbar"
-import { MobileMenu } from "./components/MobileMenu"
 import './App.css'
 import "./index.css"
-import DataUpload from './components/sections/DataUpload/DataUpload';
-import { ChartArea } from "./components/ChartArea";
-import { SelectModel } from "./components/sections/SelectModel";
+
+import { Navbar } from "./components/Navbar"
+import { MobileMenu } from "./components/MobileMenu"
+import { DataUpload } from './components/sections/DataUpload/DataUpload';
+import { ViewData } from "./components/ViewData";
+import { ModelSelect } from "./components/ModelSelect";
+import { EditModel } from "./components/EditModel";
+import { DataSummary } from "./components/DataSummary";
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dataInfo, setDataInfo] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState(null);
   const [error, setError] = useState(null);
-  const [models, setModels] = useState([]);
+  const [modelList, setModelList] = useState([]);
 
   const modelNames = ["Baseline", "LSTM", "CNN", "MLP"]
   const featureSets = ["Technical indicators", "Limit Order Book - Full", "Limit Order Book - Lite"]
   // const [selectedFeatures, setSelectedFeatures] = useState([]);
 
-  const addModel = (newModel) => setModels((prev) => [...prev, newModel])
-  const deleteModel = (id) => setModels((prev) => prev.filter((m) => m.id !== id));
-  const editModel = (model) => {
-    console.log("Edit clicked:", model);
-  };
+  const addModel = (newModel) => setModelList((prev) => [...prev, newModel])
+  const deleteModel = (id) => setModelList((prev) => prev.filter((m) => m.id !== id));
+  const updateModel = (updated) =>
+    setModelList((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+  // const editModel = (model) => {
+  //   console.log("Edit clicked:", model);
+  // };
   const setParameters = (model) => {
     console.log("Set parameters for:", model);
   };
 
   // Handle successful CSV upload
-  const handleUploadSuccess = (results) => {
+  const handleUploadSuccess = (results, file) => {
     console.log('Upload successful:', results);
     setDataInfo(results.data_info);
+    setUploadedFile(file);
     setError(null);
   };
 
@@ -38,92 +46,106 @@ function App() {
     console.error('Upload error:', errorMessage);
     setError(errorMessage);
     setDataInfo(null);
+    setUploadedFile(null);
   };
 
    // Clear all data and start over
   const handleReset = () => {
     setDataInfo(null);
+    setUploadedFile(null);
     setSelectedFeatures([]);
   };
 
   return (
-    <>
-      <div className={"min-h-screen bg-black text-gray-100"}>
+    <Router>
+        {/* Always visible */}
         <Navbar menuOpen={menuOpen} setMenuOpen={setMenuOpen}/>
         <MobileMenu menuOpen={menuOpen} setMenuOpen={setMenuOpen}/>
-        Hello World !
 
-        {/* Step 1: Data Upload */}
-        <div className="step-container">
-          <div className="step-header">
-            <span className="step-number">1</span>
-            <h2>Upload Data</h2>
-          </div>
-          
-          <DataUpload 
-            onUploadSuccess={handleUploadSuccess}
-            onUploadError={handleUploadError}
+        <Routes>
+
+          {/* Data Upload */}
+          <Route
+            path="/"
+            element={
+              <div>
+                <DataUpload 
+                  onUploadSuccess={(results, file) =>
+                    handleUploadSuccess(results, file)
+                  }
+                  onUploadError={handleUploadError}
+                  uploadedFile={uploadedFile}
+                />
+
+                {dataInfo && (
+                  <div className="mt-8">
+                    Data Summary
+                    <DataSummary dataInfo={dataInfo} />
+                  </div>
+                )}
+              </div>
+            }
           />
 
-          {/* Show data summary if upload successful */}
-          {dataInfo && (
-            <div className="data-summary">
-              <h3>Data Successfully Loaded</h3>
-              <div className="summary-grid">
-                <div className="summary-item">
-                  <span className="label">Features:</span>
-                  <span className="value">{dataInfo.num_features}</span>
-                </div>
-                <div className="summary-item">
-                  <span className="label">Observations:</span>
-                  <span className="value">{dataInfo.num_observations}</span>
-                </div>
-                <div className="summary-item">
-                  <span className="label">Date Range:</span>
-                  <span className="value">{dataInfo.date_range}</span>
-                </div>
-                <div className="summary-item">
-                  <span className="label">Features:</span>
-                  <span className="value">{dataInfo.feature_names.join(', ')}</span>
-                </div>
-              </div>
-              <button className="reset-btn" onClick={handleReset}>
-                Upload Different Data
-              </button>
-            </div>
-          )}
+          {/* View Data */}
+          <Route
+            path="/view_data"
+            element={
+              dataInfo ? (
+                <ViewData
+                  chartData={dataInfo.data}
+                  featureNames={dataInfo.feature_names}
+                />
+              ) : (
+                <p className="text-center mt-10">Please upload data first.</p>                
+              )
+            }
+          />
 
-          {/* Feature selection + chart rendering */}
-          {dataInfo && (
-            <>
-              <ChartArea
-                chartData={dataInfo.data}
-                featureNames={dataInfo.feature_names}
-                // selectedFeatures={selectedFeatures}
-              />
-            </>
-          )}
+          {/* Select Model */}
+          {/* <Route path="/load_data" element={<DataUpload />} /> */}
+          {/* <Route path="/select_model" element={<SelectModel />} /> */}
+          {/* <Route path="/display_results" element={<DisplayResults />} /> */}
+          <Route
+            path="/select_model"
+            element={
+              dataInfo ? (
+                <ModelSelect
+                  modelNames={modelNames}
+                  featureSets={featureSets}
+                  modelList={modelList}
+                  onAddModel={addModel}
+                  onDelete={deleteModel}
+                  onEdit={updateModel}
+                  onSetParameters={setParameters}
+                />
+              ):(
+                <p className="text-center mt-10">
+                  Please upload data first.
+                </p>
+              )
+            }
+          />
 
-          {/* 
-          { dataInfo && <CsvChart data={dataInfo.data} columns={dataInfo.asset_names}/> }
-          <ViewData /> */}
+          {/* <Route path="/load_data" element={<DataUpload />} /> */}
+          {/* <Route
+            path="/models/:id/edit"
+            element={
+              dataInfo ? (
+                <EditModel
+                  modelNames={modelNames}
+                  featureSets={featureSets}
+                  onSave={updateModel}
+                  modelList={modelList}
+                />
+              ):(
+                <p className="text-center mt-10">Please upload data first.</p>
+              )
+            }
+          /> */}
 
-          {dataInfo && (
-            <div className="max-w-3xl mx-auto">
-              <SelectModel
-                modelNames={modelNames}
-                featureSets={featureSets}
-                modelList={models}
-                onAddModel={addModel}
-                onDelete={deleteModel}
-                onEdit={editModel}
-                onSetParameters={setParameters}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-    </>
+        </Routes>
+    </Router>
   );
 }
 

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { FeatureSelector } from "./FeatureSelector";
+import { DataSummary } from "./DataSummary";
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 
-export const ChartArea = ({ chartData, featureNames }) => {
+export const ViewData = ({ chartData, featureNames }) => {
   const [selectedFeatures, setSelectedFeatures] = useState([]);
 
   console.log("Chart Data:", chartData);
@@ -15,6 +16,8 @@ export const ChartArea = ({ chartData, featureNames }) => {
   return (
     <div>
         <div className="flex h-screen">
+            {/* <DataSummary /> */}
+
             {/* Left panel */}
             <div className="w-1/4 p-4 border-r border-gray-300">
                 <FeatureSelector

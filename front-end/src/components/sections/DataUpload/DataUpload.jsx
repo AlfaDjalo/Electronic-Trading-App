@@ -1,26 +1,23 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './DataUpload.css';
 
-const DataUpload = ({ onUploadSuccess, onUploadError }) => {
-  // STATE MANAGEMENT
-  // selectedFile: stores the file object when user selects a file
-  const [selectedFile, setSelectedFile] = useState(null);
-  
-  // uploadStatus: tracks the current state of the upload process
-  // 'idle' = no upload in progress, 'uploading' = file being sent, 
-  // 'success' = upload completed, 'error' = something went wrong
-  const [uploadStatus, setUploadStatus] = useState('idle');
-  
-  // errorMessage: stores any error messages to display to user
+export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => {
+  const [selectedFile, setSelectedFile] = useState(uploadedFile || null);
+  const [uploadStatus, setUploadStatus] = useState(uploadedFile ? "success" : "idle");
   const [errorMessage, setErrorMessage] = useState('');
-  
-  // uploadProgress: tracks upload percentage (0-100)
   const [uploadProgress, setUploadProgress] = useState(0);
-  
-  // useRef creates a reference to the hidden file input element
-  // This allows us to trigger the file picker programmatically
   const fileInputRef = useRef(null);
-
+  
+  useEffect(() => {
+    if (uploadedFile) {
+      setSelectedFile(uploadedFile);
+      setUploadStatus("success");
+    } else {
+      setSelectedFile(null);
+      setUploadStatus("idle");
+    }
+  }, [uploadedFile]);
+  
   // FILE VALIDATION FUNCTION
   // This runs on the client side before uploading to catch obvious issues early
   const validateFile = (file) => {
@@ -45,6 +42,7 @@ const DataUpload = ({ onUploadSuccess, onUploadError }) => {
     // File passed all validation checks
     return null;
   };
+
 
   // FILE SELECTION HANDLER
   // Called when user selects a file through the file input or drag & drop
@@ -157,7 +155,7 @@ const DataUpload = ({ onUploadSuccess, onUploadError }) => {
           // Call the parent component's success handler with the results
           // This is how we pass the optimization results up to the main app
           if (onUploadSuccess) {
-            onUploadSuccess(response);
+            onUploadSuccess(response, selectedFile);
           }
         } else {
           // HTTP error status
@@ -258,16 +256,24 @@ const DataUpload = ({ onUploadSuccess, onUploadError }) => {
             <div className="file-info">
               <p className="file-name">{selectedFile.name}</p>
               <p className="file-size">{formatFileSize(selectedFile.size)}</p>
+              <p className={`file-status ${uploadStatus}`}>
+                {uploadStatus === 'success' && '✅ Uploaded successfully'}
+                {uploadStatus === 'uploading' && `⏳ Uploading... ${uploadProgress}%`}
+                {uploadStatus === 'error' && `⚠️ Error: ${errorMessage}`}
+                {uploadStatus === 'idle' && '📄 Ready to upload'}
+              </p>
             </div>
-            <button 
-              className="clear-button"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent triggering the file picker
-                handleClear();
-              }}
-            >
-              ✕
-            </button>
+              {uploadStatus !== 'uploading' && (
+                <button 
+                  className="clear-button"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent triggering the file picker
+                    handleClear();
+                  }}
+                >
+                  ✕
+                </button>
+              )}
           </div>
         )}
       </div>
@@ -323,5 +329,3 @@ const DataUpload = ({ onUploadSuccess, onUploadError }) => {
     </div>
   );
 };
-
-export default DataUpload;

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Link, NavLink } from "react-router-dom";
 
 export const Navbar = ( {menuOpen, setMenuOpen} ) => {
 
@@ -10,9 +11,9 @@ export const Navbar = ( {menuOpen, setMenuOpen} ) => {
         <nav className="fixed top-0 w-full z-40 bg-[rgba(10, 10, 10, 0.8)] backdrop-blur-lg border-b border-white/10 shadow-lg">
             <div className="max-w-5xl mx-auto px-4">
                 <div className="flex justify-between items-center h-16">
-                    <a href="#home" className="font-mono text-xl fond-bold text-white">
+                    <Link to="/" className="font-mono text-xl font-bold text-white">
                         Logo
-                    </a>
+                    </Link>
 
                     <div
                         className="w-7 h-5 relative cursor-pointer z-40 md:hidden"
@@ -22,24 +23,50 @@ export const Navbar = ( {menuOpen, setMenuOpen} ) => {
                     </div> 
 
                     <div className="hidden md:flex items-center space-x-8">
-                        <a
-                            href="#load_data"
-                            className="text-gray-300 hover:text-white transition-colors"
+                        <NavLink
+                            to="/"
+                            // to="/load_data"
+                            className={({ isActive }) =>
+                                isActive
+                                ? "text-white font-semibold"
+                                : "text-gray-300 hover:text-white transition-colors"
+                            }
                         >
                             Load Data
-                        </a>
-                        <a
-                            href="#select_model"
-                            className="text-gray-300 hover:text-white transition-colors"
+                        </NavLink>
+
+                        <NavLink
+                            to="/view_data"
+                            className={({ isActive }) =>
+                                isActive
+                                ? "text-white font-semibold"
+                                : "text-gray-300 hover:text-white transition-colors"
+                            }
+                        >
+                            View Data
+                        </NavLink>
+
+                        <NavLink
+                            to="/select_model"
+                            className={({ isActive }) =>
+                                isActive
+                                ? "text-white font-semibold"
+                                : "text-gray-300 hover:text-white transition-colors"
+                            }
                         >
                             Select Model
-                        </a>
-                       <a
-                            href="#display_results"
-                            className="text-gray-300 hover:text-white transition-colors"
+                        </NavLink>
+
+                        <NavLink
+                            to="/display_results"
+                            className={({ isActive }) =>
+                                isActive
+                                ? "text-white font-semibold"
+                                : "text-gray-300 hover:text-white transition-colors"
+                            }
                         >
                             Display Results
-                        </a>
+                        </NavLink>
                     </div>
                 </div>
             </div>

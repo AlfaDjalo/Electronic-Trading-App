@@ -63,6 +63,9 @@ def setup_api_routes(app):
             uploaded_data = df[numeric_cols].copy()
             uploaded_data = uploaded_data.reset_index()
             uploaded_data.rename(columns={uploaded_data.columns[0]: "Date"}, inplace=True)
+            
+            print(uploaded_data.index[0])
+            print(uploaded_data.index[-1])
 
             # Prepare response
             response = {
