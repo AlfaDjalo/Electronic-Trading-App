@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import './App.css'
 import "./index.css"
 
@@ -10,6 +10,7 @@ import { ViewData } from "./components/ViewData";
 import { ModelSelect } from "./components/ModelSelect";
 import { EditModel } from "./components/EditModel";
 import { DataSummary } from "./components/DataSummary";
+import { useModelConfig } from "./hooks/useModelConfig";
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -18,7 +19,12 @@ function App() {
   const [error, setError] = useState(null);
   const [modelList, setModelList] = useState([]);
 
-  const modelNames = ["Baseline", "LSTM", "CNN", "MLP"]
+  const modelConfig = useModelConfig();
+
+  if (!modelConfig) return <p>Loading model config...</p>;
+
+  const modelNames = Object.keys(modelConfig);
+  // const modelNames = ["Baseline", "LSTM", "CNN", "MLP"]
   const featureSets = ["Technical indicators", "Limit Order Book - Full", "Limit Order Book - Lite"]
   // const [selectedFeatures, setSelectedFeatures] = useState([]);
 
@@ -110,15 +116,18 @@ function App() {
             path="/select_model"
             element={
               dataInfo ? (
-                <ModelSelect
-                  modelNames={modelNames}
-                  featureSets={featureSets}
-                  modelList={modelList}
-                  onAddModel={addModel}
-                  onDelete={deleteModel}
-                  onEdit={updateModel}
-                  onSetParameters={setParameters}
-                />
+                <div className="pt-20">   {/* <-- offset for navbar height */}
+                  <ModelSelect
+                    modelNames={modelNames}
+                    modelConfig={modelConfig}
+                    featureSets={featureSets}
+                    modelList={modelList}
+                    onAddModel={addModel}
+                    onDelete={deleteModel}
+                    onEdit={updateModel}
+                    onSetParameters={setParameters}
+                  />
+                </div>
               ):(
                 <p className="text-center mt-10">
                   Please upload data first.

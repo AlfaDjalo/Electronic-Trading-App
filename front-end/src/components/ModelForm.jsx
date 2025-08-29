@@ -1,111 +1,298 @@
 import { useState, useEffect } from "react";
 
 export const ModelForm = ({
-    initialValues = {},
-    onSubmit,
-    modelNames,
+    modelConfig,
     featureSets,
+    initialValues = {},
+    onSubmit
 }) => {
-    const [selectedModel, setSelectedModel] = useState(modelNames[0] || "");
-    const [selectedFeatureSet, setSelectedFeatureSet] = useState(featureSets[0] || "");
-    const [normalise, setNormalise] = useState(false);
+    // ensure initialValues is never null
+    const safeInitial = initialValues || {};
+
+    const [selectedModel, setSelectedModel] = useState(
+        safeInitial.model || Object.keys(modelConfig)[0] || ""
+    );
+    const [selectedFeatureSet, setSelectedFeatureSet] = useState(
+        safeInitial.featureSet || featureSets[0] || ""
+    );
+    const [normalise, setNormalise] = useState(
+        safeInitial.normalise ?? false
+    );
+    const [params, setParams] = useState(safeInitial.params || {});
+
+    // Fix: Access parameters directly, not under a 'parameters' property
+    const parametersForModel = selectedModel ? modelConfig[selectedModel] || {} : {};
+
+    const handleParamChange = (key, value) => {
+        setParams(prev => ({ ...prev, [key]: value }));
+    };
 
     useEffect(() => {
-        if (initialValues) {
-        setSelectedModel(initialValues.model);
-        setSelectedFeatureSet(initialValues.featureSet);
-        setNormalise(initialValues.normalise);
-        }
-    }, [initialValues]);
-  
-    // useEffect(() => {
-    //     setSelectedModel(initialValues.model || modelNames[0] || "");
-    //     setSelectedFeatureSet(initialValues.featureSet || featureSets[0] || "");
-    //     setNormalise(initialValues.normalise || false);
-    // }, [initialValues, modelNames, featureSets]);
+        const iv = initialValues || {};
+        setSelectedModel(iv.model || Object.keys(modelConfig)[0] || "");
+        setSelectedFeatureSet(iv.featureSet || featureSets[0] || "");
+        setNormalise(iv.normalise ?? false);
+        setParams(iv.params || {});
+    }, [initialValues, featureSets, modelConfig]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        const autoName = `${selectedModel}-${selectedFeatureSet}`;
+        
         onSubmit({
-            id: initialValues?.id ?? Date.now(),
-            name: `${selectedModel}-${selectedFeatureSet}`,
+            ...safeInitial,
+            name: autoName,
             model: selectedModel,
             featureSet: selectedFeatureSet,
             normalise,
+            params,
         });
-
-        // ✅ Reset form fields
-        setSelectedModel(modelNames[0] || "");
-        setSelectedFeatureSet(featureSets[0] || "");
-        setNormalise(false);
+        // Reset only in Add mode
+        if (!safeInitial.id) {
+            setSelectedModel(Object.keys(modelConfig)[0] || "");
+            setSelectedFeatureSet(featureSets[0] || "");
+            setNormalise(false);
+            setParams({});
+        }
     };
 
+    return (
+        <form
+            onSubmit={handleSubmit}
+            className="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-2 gap-8"
+        >
+            {/* Left Column: Model selection */}
+            <div className="space-y-4">
+                <div>
+                    <label className="block mb-1 text-sm font-medium text-gray-700">
+                        Select Model
+                    </label>
+                    <select
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        className="min-w-[200px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
+                    >
+                        {Object.keys(modelConfig).map((m) => (
+                            <option key={m} value={m}>
+                                {m}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block mb-1 text-sm font-medium text-gray-700">
+                        Feature Set
+                    </label>
+                    <select
+                        value={selectedFeatureSet}
+                        onChange={(e) => setSelectedFeatureSet(e.target.value)}
+                        className="min-w-[200px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
+                    >
+                        {featureSets.map((f) => (
+                            <option key={f} value={f}>
+                                {f}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={normalise}
+                        onChange={(e) => setNormalise(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                    />
+                    <label className="text-sm text-gray-700">Normalise</label>
+                </div>
+            </div>
+
+            {/* Right Column: Parameters */}
+            <div className="space-y-4">
+                {selectedModel &&
+                    Object.entries(modelConfig[selectedModel] || {}).map(
+                        ([param, def]) => (
+                            <div key={param}>
+                                <label className="block mb-1 text-sm font-medium text-gray-700">
+                                    {param}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={params[param] ?? def.default}
+                                    onChange={(e) =>
+                                        setParams({ ...params, [param]: e.target.value })
+                                    }
+                                    className="min-w-[150px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                        )
+                    )}
+            </div>
+
+            {/* Button (spans both columns) */}
+            <div className="col-span-1 md:col-span-2 flex justify-center pt-4">
+                <button
+                    type="submit"
+                    className="px-6 py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    {initialValues?.id ? "Update Model" : "Add Model"}
+                </button>
+            </div>
+        </form>
+    );
+};
+
+// import { useState, useEffect } from "react";
+
+// export const ModelForm = ({
+//     modelConfig,
+//     featureSets,
+//     initialValues = {},
+//     onSubmit
+// }) => {
+//     // ensure initialValues is never null
+//     const safeInitial = initialValues || {};
+
+//     const [selectedModel, setSelectedModel] = useState(
+//         safeInitial.model || Object.keys(modelConfig)[0] || ""
+//     );
+//     const [selectedFeatureSet, setSelectedFeatureSet] = useState(
+//         safeInitial.featureSet || featureSets[0] || ""
+//     );
+//     const [normalise, setNormalise] = useState(
+//         safeInitial.normalise ?? false
+//     );
+//     const [params, setParams] = useState(safeInitial.params || {});
 
 
-//     const handleAddModel = (e) => {
+//     // const [selectedModel, setSelectedModel] = useState(initialValues.model || Object.keys(modelConfig)[0] || "");
+//     // const [selectedFeatureSet, setSelectedFeatureSet] = useState(initialValues.featureSet || featureSets[0] || "");
+//     // const [normalise, setNormalise] = useState(initialValues.normalise || false);
+//     // const [params, setParams] = useState(initialValues.params || {});
+
+//     const parametersForModel = selectedModel ? modelConfig[selectedModel] || {} : {};
+
+//     const handleParamChange = (key, value) => {
+//         setParams(prev => ({ ...prev, [key]: value }));
+//     };
+
+//     useEffect(() => {
+//     const iv = initialValues || {};  // <-- coerce null to empty object
+//     setSelectedModel(iv.model || Object.keys(modelConfig)[0] || "");
+//     setSelectedFeatureSet(iv.featureSet || featureSets[0] || "");
+//     setNormalise(iv.normalise ?? false);
+//     setParams(iv.params || {});
+//     }, [initialValues, featureSets, modelConfig]);
+  
+//     // useEffect(() => {
+//     //     setSelectedModel(initialValues.model || modelNames[0] || "");
+//     //     setSelectedFeatureSet(initialValues.featureSet || featureSets[0] || "");
+//     //     setNormalise(initialValues.normalise || false);
+//     // }, [initialValues, modelNames, featureSets]);
+
+//     const handleSubmit = (e) => {
 //         e.preventDefault();
-//         const newModel = {
-//         id: Date.now(), // parent could override with backend id
-//         name: `${selectedModel}-${selectedFeatureSet}`,
+//         onSubmit({
+//         ...initialValues,
 //         model: selectedModel,
 //         featureSet: selectedFeatureSet,
 //         normalise,
-//         };
-//         onAddModel?.(newModel);
-
-//         // reset normalise if you want
+//         params,
+//         });
+//         // Reset only in Add mode
+//         if (!initialValues.id) {
+//         setSelectedModel(Object.keys(modelConfig)[0] || "");
+//         setSelectedFeatureSet(featureSets[0] || "");
 //         setNormalise(false);
-//   };
+//         setParams({});
+//         }
+//     };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-    {/* Select Model */}
-    <div>
-        <label className="block mb-1">Model</label>
-        <select
-        className="border rounded p-2 w-auto min-w-[12rem] max-w-xs text-black bg-white"
-        value={selectedModel}
-        onChange={(e) => setSelectedModel(e.target.value)}
-        >
-        {modelNames.map((mn) => (
-            <option key={mn} value={mn}>
-            {mn}
-            </option>
-        ))}
-        </select>
-    </div>
+//     return (
+//         <form
+//         onSubmit={handleSubmit}
+//         className="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-2 gap-8"
+//         >
+//         {/* Left Column: Model selection */}
+//         <div className="space-y-4">
+//             <div>
+//             <label className="block mb-1 text-sm font-medium text-gray-700">
+//                 Select Model
+//             </label>
+//             <select
+//                 value={selectedModel}
+//                 onChange={(e) => setSelectedModel(e.target.value)}
+//                 className="min-w-[200px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
+//             >
+//                 {Object.keys(modelConfig).map((m) => (
+//                 <option key={m} value={m}>
+//                     {m}
+//                 </option>
+//                 ))}
+//             </select>
+//             </div>
 
-    {/* Select Feature Set */}
-    <div>
-        <label className="block mb-1">Feature Set</label>
-        <select
-        className="border rounded p-2 w-auto min-w-[12rem] max-w-xs text-black bg-white"
-        value={selectedFeatureSet}
-        onChange={(e) => setSelectedFeatureSet(e.target.value)}
-        >
-        {featureSets.map((fs) => (
-            <option key={fs} value={fs}>
-            {fs}
-            </option>
-        ))}
-        </select>
-    </div>
+//             <div>
+//             <label className="block mb-1 text-sm font-medium text-gray-700">
+//                 Feature Set
+//             </label>
+//             <select
+//                 value={selectedFeatureSet}
+//                 onChange={(e) => setSelectedFeatureSet(e.target.value)}
+//                 className="min-w-[200px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
+//             >
+//                 {featureSets.map((f) => (
+//                 <option key={f} value={f}>
+//                     {f}
+//                 </option>
+//                 ))}
+//             </select>
+//             </div>
 
-    {/* Normalise */}
-    <div className="flex items-center gap-2">
-        <input
-        type="checkbox"
-        id="normalise"
-        checked={normalise}
-        onChange={(e) => setNormalise(e.target.checked)}
-        />
-        <label htmlFor="normalise">Normalise</label>
-    </div>
+//             <div className="flex items-center gap-2">
+//             <input
+//                 type="checkbox"
+//                 checked={normalise}
+//                 onChange={(e) => setNormalise(e.target.checked)}
+//                 className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+//             />
+//             <label className="text-sm text-gray-700">Normalise</label>
+//             </div>
+//         </div>
 
-    <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-        {initialValues ? "Update Model" : "Add Model"}
-        {/* Save */}
-    </button>
-    </form>
-  );
-};
+//         {/* Right Column: Parameters */}
+//         <div className="space-y-4">
+//             {selectedModel &&
+//             Object.entries(modelConfig[selectedModel]?.parameters || {}).map(
+//                 ([param, def]) => (
+//                 <div key={param}>
+//                     <label className="block mb-1 text-sm font-medium text-gray-700">
+//                     {param}
+//                     </label>
+//                     <input
+//                     type="text"
+//                     value={params[param] ?? def}
+//                     onChange={(e) =>
+//                         setParams({ ...params, [param]: e.target.value })
+//                     }
+//                     className="min-w-[150px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
+//                     />
+//                 </div>
+//                 )
+//             )}
+//         </div>
+
+//         {/* Button (spans both columns) */}
+//         <div className="col-span-1 md:col-span-2 flex justify-center pt-4">
+//             <button
+//             type="submit"
+//             className="px-6 py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+//             >
+//             {initialValues?.id ? "Update Model" : "Add Model"}
+//             </button>
+//         </div>
+//         </form>
+//     );
+// };

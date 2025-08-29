@@ -4,7 +4,7 @@ import { ModelForm } from "./ModelForm";
 // import { ModelAdd } from "./ModelAdd";
 
 export const ModelSelect = ({
-  modelNames,
+  modelConfig,
   featureSets,
   modelList,
   onAddModel,
@@ -12,52 +12,31 @@ export const ModelSelect = ({
   onDelete,
   onSetParameters,
 }) => {
-  const [mode, setMode] = useState("add");
   const [editingModel, setEditingModel] = useState(null);
 
   const handleAdd = (newModel) => {
-    onAddModel(newModel);
-    setMode("add");
+    const modelWithId = { ...newModel, id: newModel.id ?? Date.now() };
+    onAddModel(modelWithId);
     setEditingModel(null);
   };
 
   const handleUpdate = (updatedModel) => {
     onEdit(updatedModel);
-    setMode("add");
     setEditingModel(null);
   };
 
-//   const [selectedModel, setSelectedModel] = useState(modelNames?.[0] || "");
-//   const [selectedFeatureSet, setSelectedFeatureSet] = useState(featureSets?.[0] || "");
-//   const [normalise, setNormalise] = useState(false);
-
-//   const handleAddModel = (e) => {
-//     e.preventDefault();
-//     const newModel = {
-//       id: Date.now(), // parent could override with backend id
-//       name: `${selectedModel}-${selectedFeatureSet}`,
-//       model: selectedModel,
-//       featureSet: selectedFeatureSet,
-//       normalise,
-//     };
-//     onAddModel?.(newModel);
-
-//     // reset normalise if you want
-//     setNormalise(false);
-//   };
-
   return (
     <div className="p-4">
-      <h3 className="text-xl font-bold mb-4">
+      {/* <h3 className="text-xl font-bold mb-4">
         {mode === "add" ? "Add New Model" : "Edit Model"}
-      </h3>      
+      </h3>       */}
       
       {/* <ModelAdd onAddModel={onAddModel} modelNames={modelNames} featureSets={featureSets} /> */}
       <ModelForm
-        modelNames={modelNames}
+        modelConfig={modelConfig}
         featureSets={featureSets}
         initialValues={editingModel}
-        onSubmit={mode === "add" ? handleAdd : handleUpdate}
+        onSubmit={editingModel ? handleUpdate : handleAdd}
       />
 
       <hr className="my-6" />
@@ -88,18 +67,17 @@ export const ModelSelect = ({
                     className="bg-blue-500 text-white px-2 py-1 rounded"
                     onClick={() => {
                       setEditingModel(m);
-                      setMode("edit");
                     }}
                   >
                     Edit
                   </button>
                   {/* <button
                     className="bg-blue-700 text-white px-2 py-1 rounded border border-blue-900"
-                    onClick={() => onSetParameters?.(m)}
+                    onClick={() => onSetParameters?.(m, modelConfig[m.model])}
                   >
                     Set Parameters
-                  </button>
-                  <button
+                  </button> */}
+                  {/* <button
                     className="bg-blue-500 text-white px-2 py-1 rounded border border-blue-700"
                     onClick={() => onEdit?.(m)}
                   >
