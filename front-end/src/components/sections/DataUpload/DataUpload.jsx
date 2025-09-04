@@ -1,41 +1,41 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './DataUpload.css';
 
-export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => {
-  const [selectedFile, setSelectedFile] = useState(uploadedFile || null);
-  const [uploadStatus, setUploadStatus] = useState(uploadedFile ? "success" : "idle");
+export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName }) => {
+  const [selectedFileName, setSelectedFileName] = useState(uploadedFileName || null);
+  const [uploadStatus, setUploadStatus] = useState(uploadedFileName ? "success" : "idle");
   const [errorMessage, setErrorMessage] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
-  
+
   useEffect(() => {
-    if (uploadedFile) {
-      setSelectedFile(uploadedFile);
+    if (uploadedFileName) {
+      setSelectedFileName(uploadedFileName);
       setUploadStatus("success");
     } else {
-      setSelectedFile(null);
+      setSelectedFileName(null);
       setUploadStatus("idle");
     }
-  }, [uploadedFile]);
+  }, [uploadedFileName]);
   
   // FILE VALIDATION FUNCTION
   // This runs on the client side before uploading to catch obvious issues early
-  const validateFile = (file) => {
+  const validateFile = (fileName) => {
     // Check if a file was actually selected
-    if (!file) {
+    if (!fileName) {
       return "Please select a file";
     }
 
     // Validate file type - only allow CSV files
     // file.type might be empty on some systems, so we also check the extension
-    if (file.type !== 'text/csv' && !file.name.toLowerCase().endsWith('.csv')) {
+    if (fileName.type !== 'text/csv' && !fileName.name.toLowerCase().endsWith('.csv')) {
       return "Please select a CSV file";
     }
 
     // Check file size - prevent huge files that might crash the browser/server
     // 10MB limit (10 * 1024 * 1024 bytes)
     const maxSize = 10 * 1024 * 1024; 
-    if (file.size > maxSize) {
+    if (fileName.size > maxSize) {
       return "File size must be less than 10MB";
     }
 
@@ -46,18 +46,18 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => 
 
   // FILE SELECTION HANDLER
   // Called when user selects a file through the file input or drag & drop
-  const handleFileSelect = (file) => {
+  const handleFileSelect = (fileName) => {
     // Validate the selected file
-    const validationError = validateFile(file);
+    const validationError = validateFile(fileName);
     if (validationError) {
       setErrorMessage(validationError);
-      setSelectedFile(null);
+      setSelectedFileName(null);
       setUploadStatus('error');
       return;
     }
 
     // File is valid, store it and clear any previous errors
-    setSelectedFile(file);
+    setSelectedFileName(fileName);
     setErrorMessage('');
     setUploadStatus('idle');
     setUploadProgress(0);
@@ -66,8 +66,8 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => 
   // FILE INPUT CHANGE HANDLER
   // Triggered when user uses the file picker dialog
   const handleFileInputChange = (event) => {
-    const file = event.target.files[0]; // Get the first (and only) selected file
-    handleFileSelect(file);
+    const fileName = event.target.files[0]; // Get the first (and only) selected file
+    handleFileSelect(fileName);
   };
 
   // DRAG AND DROP HANDLERS
@@ -102,17 +102,18 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => 
   // UPLOAD FUNCTION
   // This sends the file to your Python backend API
   const handleUpload = async () => {
-    if (!selectedFile) {
+    if (!selectedFileName) {
       setErrorMessage("Please select a file first");
       return;
     }
 
     // Test from ChatGPT
-    async function uploadCSV(file) {
+    async function uploadCSV(fileName) {
       const formData = new FormData();
-      formData.append("file", file); // key MUST match Flask: "file"
+      formData.append("fileName", fileName); // key MUST match Flask: "file"
 
-      const res = await fetch("http://localhost:5000/api/upload-csv", {
+      // const res = await fetch("http://localhost:5000/api/upload-csv", {
+      const res = await fetch("http://localhost:5000/api/upload_data", {
         method: "POST",
         body: formData,
       });
@@ -130,7 +131,7 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => 
       // Create FormData object to send file as multipart/form-data
       // This is the standard way to upload files via HTTP
       const formData = new FormData();
-      formData.append('file', selectedFile); // 'file' is the key your Python API will look for
+      formData.append('fileName', selectedFileName); // 'fileName' is the key your Python API will look for
 
       // Create XMLHttpRequest to track upload progress
       // fetch() doesn't support upload progress tracking
@@ -155,7 +156,7 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => 
           // Call the parent component's success handler with the results
           // This is how we pass the optimization results up to the main app
           if (onUploadSuccess) {
-            onUploadSuccess(response, selectedFile);
+            onUploadSuccess(response, selectedFileName);
           }
         } else {
           // HTTP error status
@@ -180,7 +181,8 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => 
 
       // Send the request to your Python API
       // TODO: Replace with your actual API endpoint URL
-      xhr.open('POST', 'http://localhost:5000/api/upload-csv', true);
+      // xhr.open('POST', 'http://localhost:5000/api/upload-csv', true);
+      xhr.open('POST', 'http://localhost:5000/api/upload_data', true);
       xhr.send(formData);
 
     } catch (error) {
@@ -198,7 +200,7 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => 
   // CLEAR SELECTION FUNCTION
   // Allows user to start over with a different file
   const handleClear = () => {
-    setSelectedFile(null);
+    setSelectedFileName(null);
     setUploadStatus('idle');
     setErrorMessage('');
     setUploadProgress(0);
@@ -244,7 +246,7 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => 
         />
 
         {/* UPLOAD AREA CONTENT */}
-        {!selectedFile ? (
+        {!selectedFileName ? (
           <div className="upload-prompt">
             <div className="upload-icon">📁</div>
             <p>Click to select a CSV file or drag and drop here</p>
@@ -254,8 +256,8 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => 
           <div className="file-selected">
             <div className="file-icon">📄</div>
             <div className="file-info">
-              <p className="file-name">{selectedFile.name}</p>
-              <p className="file-size">{formatFileSize(selectedFile.size)}</p>
+              <p className="file-name">{selectedFileName.name}</p>
+              <p className="file-size">{formatFileSize(selectedFileName.size)}</p>
               <p className={`file-status ${uploadStatus}`}>
                 {uploadStatus === 'success' && '✅ Uploaded successfully'}
                 {uploadStatus === 'uploading' && `⏳ Uploading... ${uploadProgress}%`}
@@ -312,12 +314,12 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFile }) => 
         <button 
           className="upload-button"
           onClick={handleUpload}
-          disabled={!selectedFile || uploadStatus === 'uploading'}
+          disabled={!selectedFileName || uploadStatus === 'uploading'}
         >
           {uploadStatus === 'uploading' ? 'Processing...' : 'Upload'}
         </button>
 
-        {selectedFile && uploadStatus !== 'uploading' && (
+        {selectedFileName && uploadStatus !== 'uploading' && (
           <button 
             className="clear-button-secondary"
             onClick={handleClear}

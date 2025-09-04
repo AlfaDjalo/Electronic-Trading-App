@@ -71,6 +71,13 @@ class MLData:
             print("Processing data.")
 
         try:
+            # Add mid_price column
+            if 'bid_price_0' in self.data.columns and 'ask_price_0' in self.data.columns:
+                self.data['mid_price'] = (self.data['bid_price_0'] + self.data['ask_price_0']) / 2
+            else:
+                print("Missing 'bid_price_0' or 'ask_price_0' columns. Cannot calculate 'mid_price'.")
+            
+            
             if self.feature_set:
                 self.apply_feature_set(self.feature_set)
 

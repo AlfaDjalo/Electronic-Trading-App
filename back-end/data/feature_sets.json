@@ -1,5 +1,5 @@
 {
-    "Daily data historical": {
+    "Daily_data_historical": {
         "features": [
             {
                 "name": "Close",
@@ -41,7 +41,7 @@
             }
         }
     },
-    "Daily data historical 2": {
+    "Daily_data_historical 2": {
         "features": [
             {
                 "function": "raw_data",
@@ -83,7 +83,7 @@
         },
         "data_type": "daily"
     },
-    "Daily data historical 10": {
+    "Daily_data_historical_10": {
         "features": [
             {
                 "function": "raw_data",
@@ -179,7 +179,7 @@
             }
         }
     },
-    "Limit Order Book": {
+    "Limit_Order_Book": {
         "data_type": "intraday",
         "features": [
             {
@@ -353,7 +353,7 @@
             }
         }
     },
-    "Cut Down Limit Order Book": {
+    "Cut_Down_Limit_Order_Book": {
         "data_type": "intraday",
         "features": [
             {
@@ -395,7 +395,7 @@
             }
         }
     },
-    "Technical Analysis - RSI": {
+    "Technical_Analysis_-_RSI": {
         "data_type": "intraday",
         "features": [
             {
@@ -426,7 +426,7 @@
             }
         }
     },
-    "Technical Analysis - MACD": {
+    "Technical_Analysis_-_MACD": {
         "data_type": "intraday",
         "features": [
             {
@@ -459,7 +459,7 @@
             }
         }
     },
-    "Technical Analysis - Bollinger Bands": {
+    "Technical_Analysis_-_Bollinger_Bands": {
         "data_type": "intraday",
         "features": [
             {
@@ -510,7 +510,7 @@
             }
         }
     },
-    "Sandbox Intraday": {
+    "Sandbox_Intraday": {
         "features": [
             {
                 "function": "raw_data",
@@ -540,17 +540,17 @@
         },
         "data_type": "intraday"
     },
-    "Test Set": {
+    "Test_Set": {
         "data_type": "daily",
         "features": [],
         "target": null
     },
-    "Test Set Intraday": {
+    "Test_Set_Intraday": {
         "data_type": "intraday",
         "features": [],
         "target": null
     },
-    "Test Feature Set 1": {
+    "Test_Feature_Set 1": {
         "data_type": "test",
         "features": [
             {

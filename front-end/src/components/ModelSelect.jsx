@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { ModelForm } from "./ModelForm";
-// import { ModelAdd } from "./ModelAdd";
+import { ModelRun } from "./ModelRun"; 
 
 export const ModelSelect = ({
   modelConfig,
@@ -10,9 +11,12 @@ export const ModelSelect = ({
   onAddModel,
   onEdit,
   onDelete,
-  onSetParameters,
+  rawData,
+  setResults
 }) => {
   const [editingModel, setEditingModel] = useState(null);
+
+  const navigate = useNavigate();
 
   const handleAdd = (newModel) => {
     const modelWithId = { ...newModel, id: newModel.id ?? Date.now() };
@@ -94,6 +98,28 @@ export const ModelSelect = ({
             ))}
           </tbody>
         </table>
+      )}
+
+      {modelList.length > 0 && (
+        <div className="flex justify-center mt-6">
+          <button
+            className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            onClick={async () => {
+              try {
+                // Pass all models to ModelRun
+                const results = await ModelRun(modelList, rawData); 
+                // console.log("Run results:", results);
+                setResults(results);            // save in App.js state
+                navigate("/view_results");   // go to results page
+                // TODO: handle displaying results in your UI
+              } catch (err) {
+                console.error("Error running models:", err);
+              }
+            }}
+          >
+            Run Models
+          </button>
+        </div>
       )}
     </div>
   );

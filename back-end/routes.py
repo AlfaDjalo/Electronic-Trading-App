@@ -403,42 +403,7 @@ def setup_routes(app):
 
                 model_handler.run_keras_model(model)
 
-                # if model == "Baseline":
-                #     # model_handler.baseline(ml_data.get_target())
-                #     model_handler.baseline(ml_data.get_window(), ml_data.get_target())
-                # elif model == 'LinearRegression':
-                #     model_handler.keras_regression(ml_data.get_window(), ml_data.get_target())
-                #     # model_handler.regression()
-                # elif model == 'RNN':
-                #     model_handler.ML(model_handler.simpleRNN_)
-                # elif model == 'LSTM':
-                #     model_handler.keras_LSTM(ml_data.get_window(), ml_data.get_target())
-                #     # model_handler.ML(model_handler.lstm_)
-                # elif model == 'GRU':
-                #     model_handler.ML(model_handler.gru_)
-                # # elif model == 'AlphaRNN':
-                # #     model_handler.ML(model_handler.alpharnn_)
-                # # elif model == 'AlphatRNN':
-                # #     model_handler.ML(model_handler.alphatrnn_)
-                # elif model == 'CNN':
-                #     model_handler.keras_CNN(ml_data.get_window(), ml_data.get_target())
-                #     # model_handler.train_lob_cnn()
-                #     # return redirect(url_for('comparison_results'))
-                # elif model == 'MLP':
-                #     model_handler.keras_MLP(ml_data.get_window(), ml_data.get_target())
-
                 print(f"Predicting for {model}")
-
-                # print_session_size(session)
-
-                # print("Current session keys:", list(session.keys()))
-                # print("Session size:", len(str(session)))
-
-                # json_size = len(json.dumps(dict(session), default=str).encode('utf-8'))
-                # print(f"JSON serialized size: {json_size} bytes")
-
-                # estimated_cookie_size = int(json_size * 1.4)  # Account for encoding overhead
-                # print(f"Estimated cookie size: {estimated_cookie_size} bytes")
 
                 if model == 'CNN_old':
                     x_test = model_handler.prepare_cnn_input(ml_data.get_data()['x_test'])
@@ -516,10 +481,6 @@ def setup_routes(app):
                 'prediction_chart': prediction_chart_path,
                 'error_chart': error_chart_path
             }
-
-        # print(results)
-        # results_size = len(json.dumps(results, default=str).encode('utf-8'))
-        # print(f"🔍 Results data size: {results_size} bytes")
         
         # Store results in the session for rendering on the comparison_results page
         session['comparison_results'] = {

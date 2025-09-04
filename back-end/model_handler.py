@@ -237,10 +237,18 @@ class ModelHandler:
 
     def get_stats(self, y_test, y_pred):
         """Calculate stats for the current model."""
+        print("In get stats")
+        print(y_pred)
+        print(y_test)
+        print(mean_squared_error(y_test, y_pred))
+        print(np.sqrt(mean_squared_error(y_test, y_pred)))
+        print(r2_score(y_test, y_pred))
         stats = {
             'RMSE': f"{np.sqrt(mean_squared_error(y_test, y_pred)):.3f}",
             'Variance': f"{r2_score(y_test, y_pred):.3f}"
         }
+        print("About to return from get stats")
+        print(stats)
         return stats
 
     def prediction(self, input_data):

@@ -1,52 +1,35 @@
 import { useState } from "react";
-import { FeatureSelector } from "./FeatureSelector";
-import { DataSummary } from "./DataSummary";
-import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
+import { SeriesSelector } from "./SeriesSelector";
+import { ViewChart } from "./ViewChart";
+// import { DataSummary } from "./DataSummary";
 
-export const ViewData = ({ chartData, featureNames }) => {
-  const [selectedFeatures, setSelectedFeatures] = useState([]);
+export const ViewData = ({ data, seriesNames }) => {
+  const [selectedSeries, setSelectedSeries] = useState(seriesNames.length > 1 ? [seriesNames[0]] : []);
 
-  console.log("Chart Data:", chartData);
-  console.log("Selected Features:", featureNames);
-
-  if (!chartData || chartData.length === 0) {
-    return <p className="p-4">No data loaded yet.</p>;
+  if (!data || data.length === 0) {
+    return <p className="p-4">No data loaded yet.</p>
   }
 
   return (
     <div>
-        <div className="flex h-screen">
-            {/* <DataSummary /> */}
+      <div className="flex h-screen">
 
-            {/* Left panel */}
-            <div className="w-1/4 p-4 border-r border-gray-300">
-                <FeatureSelector
-                features={featureNames}
-                selectedFeatures={selectedFeatures}
-                onChange={setSelectedFeatures}
-                />
-            </div>
-
-            {/* Right panel */}
-            <div className="w-3/4 p-4">
-                <LineChart width={800} height={500} data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="Date" />
-                <YAxis domain={['auto', 'auto']} />
-                <Tooltip />
-                <Legend />
-                {selectedFeatures.map((feature, idx) => (
-                    <Line
-                    key={feature}
-                    type="monotone"
-                    dataKey={feature}
-                    stroke={`hsl(${idx * 50}, 70%, 50%)`} // different color for each
-                    dot={false}
-                    />
-                ))}
-                </LineChart>
-            </div>
+        {/* Left panel */}
+        <div className="w-1/4 p-4 border-r border-gray-300">
+          <SeriesSelector
+            seriesNames={seriesNames}
+            selectedSeries={selectedSeries}
+            onChange={setSelectedSeries}
+          />
         </div>
+
+        {/* Right panel */}
+        <div className="w-3/4 p-4">
+          <ViewChart chartData={data} selectedSeries={selectedSeries} />
+        </div>
+      </div>
+      {/* <DataSummary data={data} /> */}
     </div>
   );
 };
+
