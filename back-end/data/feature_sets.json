@@ -341,6 +341,17 @@
                 ],
                 "function": "raw_data",
                 "function_parameters": null
+            },
+            {
+                "name": "target",
+                "function": "create_lagged_average",
+                "function_parameters": {
+                    "num_lags": -10
+                },
+                "input_data_fields": [
+                    "bid_price_0",
+                    "ask_price_0"
+                ]
             }
         ],
         "target": {
@@ -383,6 +394,17 @@
                     "ask_volume_0"
                 ],
                 "function": "raw_data"
+            },
+            {
+                "name": "target",
+                "function": "create_lagged_average",
+                "function_parameters": {
+                    "num_lags": -10
+                },
+                "input_data_fields": [
+                    "bid_price_0",
+                    "ask_price_0"
+                ]
             }
         ],
         "target": {
@@ -527,7 +549,18 @@
                     "ask_price_0"
                 ],
                 "name": "ask_price_0"
-            }
+            },
+            {
+                "name": "target",
+                "function": "lagged_average",
+                "function_parameters": {
+                    "num_lags": -10
+                },
+                "input_data_fields": [
+                    "bid_price_0",
+                    "ask_price_0"
+                ]
+            }    
         ],
         "target": {
             "function": "create_lag",
@@ -559,13 +592,18 @@
                 "input_data_fields": [
                     "feature1"
                 ]
-            }
-        ],
-        "target": {
-            "function": "raw_data",
-            "input_data_fields": [
-                "feature1"
-            ]
-        }
+            },
+            {
+                "name": "target",
+                "function": "lagged_average",
+                "function_parameters": {
+                    "num_lags": -10
+                },
+                "input_data_fields": [
+                    "bid_price_0",
+                    "ask_price_0"
+                ]
+            }    
+        ]
     }
 }

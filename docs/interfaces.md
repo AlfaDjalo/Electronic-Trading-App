@@ -5,7 +5,7 @@
 | Endpoint          | Method | Input (JSON)                           | Output (JSON)                   |
 |-------------------|--------|----------------------------------------|---------------------------------|
 | `/api/load_data` | POST   | `{ fileName }`   | `{ rawData }`      |
-| `/api/process_data` | POST   | `{ rawData, featureSet }`   | `{ processedData }`      |
+| `/api/feature_sets` | POST   | `{ }`   | `{ featureSets }`      |
 | `/api/run_models` | POST   | `{ processedData, modelList, hyperparameters }`   | `{ resultsData }`      |
 
 
@@ -17,8 +17,8 @@ classDiagram
       +load(fileName) rawData
     }
 
-    class DataProcessor {
-      +process(rawData, featureSet) processedData
+    class FeatureSetLoader {
+      +load() featureSets
     }
 
     class ModelRunner {
@@ -27,11 +27,11 @@ classDiagram
 
     class API {
       +POST /api/load_data()
-      +POST /api/process_data()
+      +POST /api/load_feature_sets()
       +POST /api/run_models()
     }
 
 
     API --> DataLoader
-    API --> DataProcessor
+    API --> FeatureSetLoader
     API --> ModelRunner

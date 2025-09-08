@@ -75,18 +75,7 @@ export const ModelSelect = ({
                   >
                     Edit
                   </button>
-                  {/* <button
-                    className="bg-blue-700 text-white px-2 py-1 rounded border border-blue-900"
-                    onClick={() => onSetParameters?.(m, modelConfig[m.model])}
-                  >
-                    Set Parameters
-                  </button> */}
-                  {/* <button
-                    className="bg-blue-500 text-white px-2 py-1 rounded border border-blue-700"
-                    onClick={() => onEdit?.(m)}
-                  >
-                    Edit
-                  </button> */}
+
                   <button
                     className="bg-white text-red-600 px-2 py-1 rounded border border-red-600"
                     onClick={() => onDelete?.(m.id)}

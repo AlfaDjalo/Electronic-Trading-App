@@ -57,16 +57,16 @@ export const Navbar = ( {menuOpen, setMenuOpen} ) => {
                             Select Model
                         </NavLink>
 
-                        {/* <NavLink
-                            to="/view_processed_data"
+                        <NavLink
+                            to="/manage_feature_sets"
                             className={({ isActive }) =>
                                 isActive
                                 ? "text-white font-semibold"
                                 : "text-gray-300 hover:text-white transition-colors"
                             }
                         >
-                            Process Data
-                        </NavLink> */}
+                            Manage Feature Sets
+                        </NavLink>
 
                         <NavLink
                             to="/view_results"
