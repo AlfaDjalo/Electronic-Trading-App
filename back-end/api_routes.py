@@ -4,11 +4,16 @@ import io
 import os
 from flask import request, jsonify
 import json
+import requests
+from io import StringIO
+from flask_cors import CORS
 
 from stock_data import StockData
 from ml_data import MLData
 from model_handler import ModelHandler
 from feature_set import FeatureSetManager
+from process_data import DataProcessor
+# from routes import get_tickers_by_category
 # from flask import render_template, request, redirect, url_for, session, jsonify, send_file, send_from_directory  # Add this import for serving files
 
 # FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\electronic_trading_app\\back-end\\data\\feature_sets.json"
@@ -64,7 +69,60 @@ def setup_api_routes(app):
             # print(traceback.format_exc())
             return jsonify({'error': error_msg}), 500
 
+    @app.route("/api/yahoo_data", methods=["POST", "OPTIONS"])
+    def yahoo_data():
+        if request.method == "OPTIONS":
+            # Preflight request handled automatically by flask-cors
+            return jsonify({"status": "ok"}), 200
 
+        data = request.get_json()
+        ticker = data.get("ticker")
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+
+        print(data)
+
+        if not ticker:
+            return jsonify({"success": False, "error": "Ticker is required"}), 400
+
+        try:
+            df = yf.download(tickers=ticker, start=start_date, end=end_date, auto_adjust=False)
+            print(df)
+            if df.empty:
+                return jsonify({"success": False, "error": "No data found"}), 404
+
+            df.index = df.index.strftime("%Y-%m-%d %H:%M:%S")
+            df = df.reset_index()
+
+            return jsonify({
+                "success": True,
+                "timeSeriesData": df.to_dict(orient="records"),
+                "ticker": ticker,
+                "start_date": start_date,
+                "end_date": end_date,
+            })
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    @app.route('/api/get_tickers/<category>', methods=['GET'])
+    # @app.route('/api/get_tickers/<category>', methods=['GET', "OPTIONS"])
+    def get_tickers(category):
+        """
+        Fetch tickers for the given category.
+
+        Args:
+            category (str): The selected category.
+
+        Returns:
+            Response: JSON response containing the list of tickers.
+        """
+        # if request.method == "OPTIONS":
+        #     # Preflight request handled automatically by flask-cors
+        #     return jsonify({"status": "ok"}), 200
+            
+        print(f"Getting tickers for {category}")
+        tickers = get_tickers_by_category(category)
+        return jsonify({'tickers': tickers})
 
     @app.route("/api/feature_sets", methods=["GET", "OPTIONS"])
     def get_feature_sets():
@@ -87,7 +145,33 @@ def setup_api_routes(app):
     def get_functions():
         return jsonify(AVAILABLE_FUNCTIONS)
 
+    @app.route("/api/save_feature_set", methods=["POST"])
+    def save_feature_set():
+        try:
+            data = request.json
+            name = data.get("name")
+            feature_set = data.get("feature_set")
 
+            if not name or not feature_set:
+                return jsonify({"error": "Missing feature set name or content"}), 400
+
+            # Load existing file
+            if os.path.exists(FEATURE_SETS_FILE):
+                with open(FEATURE_SETS_FILE, "r") as f:
+                    all_sets = json.load(f)
+            else:
+                all_sets = {}
+
+            # Overwrite / update
+            all_sets[name] = feature_set
+
+            # Save back to file
+            with open(FEATURE_SETS_FILE, "w") as f:
+                json.dump(all_sets, f, indent=2)
+
+            return jsonify({"status": "ok", "message": f"Feature set '{name}' saved."})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
 
 # @app.route("/api/process_data", methods=["POST"])
@@ -154,6 +238,8 @@ def setup_api_routes(app):
         
         data = request.get_json()
 
+        print("Top-level keys received:", list(data.keys()))
+
         raw_data = data.get("rawData", [])
         model_list = data.get("modelList", [])
         hyperparameters = data.get("hyperparameters")
@@ -164,7 +250,7 @@ def setup_api_routes(app):
             return jsonify({"error": "No data provided"}), 400
 
         raw_data = pd.DataFrame(raw_data)
-        print(raw_data.head())
+        # print(raw_data.head())
         feature_set_manager = FeatureSetManager(FEATURE_SETS_FILE)
 
         results = {
@@ -178,9 +264,9 @@ def setup_api_routes(app):
         for model in model_list:
             try:
 
-                # print(model)
+                print(model)
                 # print(raw_data)
-                # print(hyperparameters)
+                print(hyperparameters)
 
                 model_results = run_model(model, raw_data, feature_set_manager, hyperparameters)
 
@@ -197,6 +283,7 @@ def setup_api_routes(app):
                 results["stats"].update(model_results["stats"])
 
             except Exception as e:
+                print(e)
                 results["predictions"][model["name"]] = []
                 results["stats"][model["name"]] = {"error": str(e)}
 
@@ -253,7 +340,6 @@ def run_model(model, raw_data, feature_set_manager, hyperparameters):
     and return predictions & stats as JSON.
     """
     print("In run_model")
-    train_val_test_split = hyperparameters.get("train_val_test_split", [0.8, 0.1, 0.1])
 
     results = {
         "dates": None,
@@ -262,33 +348,60 @@ def run_model(model, raw_data, feature_set_manager, hyperparameters):
         "stats": {}
     }
 
+    train_ratio, val_ratio, test_ratio = hyperparameters.get("train_val_test_split", [0.8, 0.1, 0.1])
+    # train_val_test_split = hyperparameters.get("train_val_test_split", [0.8, 0.1, 0.1])
     model_name = model["model"]
     feature_set_name = model.get("featureSet")
+    feature_set=feature_set_manager.get_feature_set(feature_set_name)
     normalise = model.get("normalise", False)
     params = model.get("params", {})
+    forecast_period=model.get("forecastPeriod", 1)
+    input_width=model.get("inputWidth", 1)
+
+    # print("About to create MLData")
+    # ml_data = MLData(
+    #     raw_data=raw_data, 
+    #     train_percentage=train_val_test_split[0],
+    #     val_percentage=train_val_test_split[1],
+    #     feature_set=feature_set_manager.get_feature_set(feature_set_name),
+    #     normalise=normalise,
+    #     verbose=DEBUG
+    # )
+
     print("About to create MLData")
-    ml_data = MLData(
+    ml_data = DataProcessor(
         raw_data=raw_data, 
-        train_percentage=train_val_test_split[0],
-        val_percentage=train_val_test_split[1],
-        feature_set=feature_set_manager.get_feature_set(feature_set_name),
+        # feature_set=feature_set_manager.get_feature_set(feature_set_name),
+        # forecast_period=model.get("forecastPeriod", 1),
+        feature_set=feature_set,
+        forecast_period=forecast_period,
+        input_width=input_width,
         normalise=normalise,
-        verbose=DEBUG
+        # train_ratio=train_val_test_split[0],
+        # val_ratio=train_val_test_split[1],
+        train_ratio=train_ratio,
+        val_ratio=val_ratio
     )
 
-    print("Created MLData")
+    print("Created DataProcessor")
+
+    # print("Created MLData")
     # print(ml_data.get_data())
     # print(params)
     # print(ml_data.get_window())
     # print(ml_data.get_target())
     # print(model_name)
 
+    processed_data = ml_data.get_data()
+    window_generator = ml_data.get_window()
+    target = ml_data.get_target()
+
     # Run model
     model_handler = ModelHandler(
-        ml_data.get_data(),
+        data = processed_data,
         params=params,
-        window_generator=ml_data.get_window(),
-        target=ml_data.get_target(),
+        window_generator=window_generator,
+        target=target,
         verbose=DEBUG
     )
 
@@ -302,15 +415,18 @@ def run_model(model, raw_data, feature_set_manager, hyperparameters):
 
     # Reverse normalization if needed
     if ml_data.get_normalise():
-        target_params = ml_data.get_normalisation_params(ml_data.get_target())
-        y_pred = (y_pred * target_params["std"]) + target_params["mean"]
-        y_test = (y_test * target_params["std"]) + target_params["mean"]
-        print("Reversed normalization")
+        target = ml_data.get_target()
+        params = ml_data.get_normalisation_params(target)
+        # target_params = ml_data.get_normalisation_params(ml_data.get_target())
+        if params:
+            y_pred = (y_pred * params["std"]) + params["mean"]
+            y_test = (y_test * params["std"]) + params["mean"]
+            print("Reversed normalization")
     
     # Dates aligned to test set
     date_series = pd.to_datetime(raw_data["date"], errors="coerce")
-    train_len = int(len(raw_data) * train_val_test_split[0])
-    val_len = int(len(raw_data) * train_val_test_split[1])
+    train_len = int(len(raw_data) * train_ratio)
+    val_len = int(len(raw_data) * val_ratio)
     start_idx = train_len + val_len
     # dates_test = date_series.iloc[start_idx:].dt.strftime("%Y-%m-%d").tolist()
     # dates_test = date_series.iloc[start_idx:].dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
@@ -319,12 +435,109 @@ def run_model(model, raw_data, feature_set_manager, hyperparameters):
     results["dates"] = dates_test
     results["actual"] = y_test.tolist()
     results["predictions"][model["name"]] = y_pred.tolist()
-    # print(model_handler.get_stats(y_test, y_pred))
+    print(model_handler.get_stats(y_test, y_pred))
+    stats = model_handler.get_stats(y_test, y_pred)
+    results["stats"][model["name"]] = stats
     # results["stats"][model["name"]] = model_handler.get_stats(y_test, y_pred)
-    # print("Set stats")
+    print("Stats:", stats)
 
     # print("Results:")
     # print(results)
 
     return results
+
+
+def get_tickers_by_category(category: str):
+    """
+    Fetches tickers for a given category (e.g., 'australian', 'us').
+
+    Tries to use lxml first, then html5lib. Returns empty list on failure.
+    """
+    url_map = {
+        "australian": "https://en.wikipedia.org/wiki/S%26P/ASX_200",
+        "us": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
+    }
+
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+
+    url = url_map.get(category.lower())
+    if not url:
+        print(f"⚠️ Unknown category: {category}")
+        return []
+
+    print(f"Fetching tickers for {category} from {url}")
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        # Try lxml first, then html5lib
+        for flavor in ("lxml", "html5lib"):
+            try:
+                tables = pd.read_html(StringIO(response.text), flavor=flavor)
+                break
+            except Exception as e:
+                print(f"⚠️ Failed to parse with {flavor}: {e}")
+        else:
+            print("❌ Could not parse tables with any parser.")
+            return []
+
+        # Extract tickers depending on table structure
+        if category.lower() == "australian":
+            df = tables[2]
+            tickers = df[['Code', 'Company']].to_dict(orient='records')
+        elif category.lower() == "us":
+            df = tables[0]
+            tickers = df[['Symbol', 'Security']].rename(
+                columns={'Symbol': 'Code', 'Security': 'Company'}
+            ).to_dict(orient='records')
+        # if category.lower() == "australian":
+        #     df = tables[2]  # ASX 200 table index
+        #     tickers = df['Code'].astype(str).tolist()
+        # elif category.lower() == "us":
+        #     df = tables[0]
+        #     tickers = df['Symbol'].astype(str).tolist()
+        else:
+            tickers = df[[]]
+
+        print(f"✅ Found {len(tickers)} tickers for {category}")
+        return tickers
+
+    except Exception as e:
+        print(f"❌ Error fetching tickers for {category}: {e}")
+        return []
+
+
+# def get_tickers_by_category(category):
+#     # Helper function to fetch tickers based on category
+#     tickers = []
+
+#     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+
+#         if (category == 'australian'):
+#             url = "https://en.wikipedia.org/wiki/S%26P/ASX_200"
+#             response = requests.get(url, headers=headers)
+#             asx200 = pd.read_html(response.text)[2]
+#             # asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
+#             tickers = asx200[['Code', 'Company']].to_dict(orient="records")
+#     if (category == 'australian'):
+#         url = "https://en.wikipedia.org/wiki/S%26P/ASX_200"
+#         response = requests.get(url, headers=headers)
+#         asx200 = pd.read_html(response.text, flavor='lxml')[2]
+#         # asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
+#         tickers = asx200[['Code', 'Company']].to_dict(orient="records")
+#     elif (category == 'us'):
+#         url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+#         response = requests.get(url, headers=headers)
+#         sp500 = pd.read_html(response.text)[0]
+#         # sp500 = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
+#         sp500['Symbol'] = sp500['Symbol'].str.replace('.', '-')
+#         tickers = sp500[['Symbol', 'Security']].rename(columns={'Symbol': 'Code', 'Security': 'Company'}).to_dict(orient="records")
+#     elif (category == 'fx'):
+#         tickers = [{'Code': 'AUDUSD=X', 'Company': 'AUDUSD'}]
+#     elif (category == 'crypto'):
+#         tickers = [{'Code': 'BTC-USD', 'Company': 'Bitcoin'}]
+#     elif (category == 'test'):
+#         tickers = [{'Code': 'flat', 'Company': 'Flat Co.'}, {'Code': 'ramp', 'Company': 'Ramp Co.'}, {'Code': 'wave', 'Company': 'Wave Co.'}]
+#     return tickers
 

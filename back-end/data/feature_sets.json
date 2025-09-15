@@ -1,609 +1,616 @@
 {
-    "Daily_data_historical": {
-        "features": [
-            {
-                "name": "Close",
-                "input_data_fields": [
-                    "close"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "Close_lagged_1",
-                "input_data_fields": [
-                    "close"
-                ],
-                "function": "create_lag",
-                "function_parameters": {
-                    "num_lags": 1
-                }
-            },
-            {
-                "name": "Close_lagged_2",
-                "input_data_fields": [
-                    "close"
-                ],
-                "function": "create_lag",
-                "function_parameters": {
-                    "num_lags": 2
-                }
-            }
+  "Daily_data_historical": {
+    "features": [
+      {
+        "name": "Close",
+        "input_data_fields": [
+          "close"
         ],
-        "data_type": "daily",
-        "target": {
-            "input_data_fields": [
-                "close"
-            ],
-            "function": "create_lag",
-            "function_parameters": {
-                "num_lags": -1
-            }
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "Close_lagged_1",
+        "input_data_fields": [
+          "close"
+        ],
+        "function": "create_lag",
+        "function_parameters": {
+          "num_lags": 1
         }
-    },
-    "Daily_data_historical 2": {
-        "features": [
-            {
-                "function": "raw_data",
-                "function_parameters": null,
-                "input_data_fields": [
-                    "close"
-                ],
-                "name": "Close"
-            },
-            {
-                "function": "create_lag",
-                "function_parameters": {
-                    "num_lags": 1
-                },
-                "input_data_fields": [
-                    "close"
-                ],
-                "name": "Close_lagged_1"
-            },
-            {
-                "function": "create_lag",
-                "function_parameters": {
-                    "num_lags": 2
-                },
-                "input_data_fields": [
-                    "close"
-                ],
-                "name": "Close_lagged_2"
-            }
+      },
+      {
+        "name": "Close_lagged_2",
+        "input_data_fields": [
+          "close"
         ],
-        "target": {
-            "function": "create_lag",
-            "function_parameters": {
-                "num_lags": -2
-            },
-            "input_data_fields": [
-                "close"
-            ]
-        },
-        "data_type": "daily"
-    },
-    "Daily_data_historical_10": {
-        "features": [
-            {
-                "function": "raw_data",
-                "function_parameters": null,
-                "input_data_fields": [
-                    "close"
-                ],
-                "name": "Close"
-            },
-            {
-                "function": "create_lag",
-                "function_parameters": {
-                    "num_lags": 1
-                },
-                "input_data_fields": [
-                    "close"
-                ],
-                "name": "Close_lagged_1"
-            },
-            {
-                "function": "create_lag",
-                "function_parameters": {
-                    "num_lags": 2
-                },
-                "input_data_fields": [
-                    "close"
-                ],
-                "name": "Close_lagged_2"
-            }
-        ],
-        "target": {
-            "function": "create_lag",
-            "function_parameters": {
-                "num_lags": -10
-            },
-            "input_data_fields": [
-                "close"
-            ]
-        },
-        "data_type": "daily"
-    },
-    "OHLCV": {
-        "features": [
-            {
-                "name": "volume",
-                "input_data_fields": [
-                    "volume"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "open",
-                "input_data_fields": [
-                    "open"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "high",
-                "input_data_fields": [
-                    "high"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "low",
-                "input_data_fields": [
-                    "low"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "close",
-                "input_data_fields": [
-                    "close"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            }
-        ],
-        "data_type": "daily",
-        "target": {
-            "input_data_fields": [
-                "close"
-            ],
-            "function": "create_lag",
-            "function_parameters": {
-                "num_lags": -1
-            }
+        "function": "create_lag",
+        "function_parameters": {
+          "num_lags": 2
         }
-    },
-    "Limit_Order_Book": {
-        "data_type": "intraday",
-        "features": [
-            {
-                "name": "bid_price_4",
-                "input_data_fields": [
-                    "bid_price_4"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "bid_volume_4",
-                "input_data_fields": [
-                    "bid_volume_4"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "bid_price_3",
-                "input_data_fields": [
-                    "bid_price_3"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "bid_volume_3",
-                "input_data_fields": [
-                    "bid_volume_3"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "bid_price_2",
-                "input_data_fields": [
-                    "bid_price_2"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "bid_volume_2",
-                "input_data_fields": [
-                    "bid_volume_2"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "bid_price_1",
-                "input_data_fields": [
-                    "bid_price_1"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "bid_volume_1",
-                "input_data_fields": [
-                    "bid_volume_1"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "bid_price_0",
-                "input_data_fields": [
-                    "bid_price_0"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "bid_volume_0",
-                "input_data_fields": [
-                    "bid_volume_0"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "ask_price_0",
-                "input_data_fields": [
-                    "ask_price_0"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "ask_volume_0",
-                "input_data_fields": [
-                    "ask_volume_0"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "ask_price_1",
-                "input_data_fields": [
-                    "ask_price_1"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "ask_volume_1",
-                "input_data_fields": [
-                    "ask_volume_1"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "ask_price_2",
-                "input_data_fields": [
-                    "ask_price_2"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "ask_volume_2",
-                "input_data_fields": [
-                    "ask_volume_2"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "ask_price_3",
-                "input_data_fields": [
-                    "ask_price_3"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "ask_volume_3",
-                "input_data_fields": [
-                    "ask_volume_3"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "ask_price_4",
-                "input_data_fields": [
-                    "ask_price_4"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "ask_volume_4",
-                "input_data_fields": [
-                    "ask_volume_4"
-                ],
-                "function": "raw_data",
-                "function_parameters": null
-            },
-            {
-                "name": "target",
-                "function": "create_lagged_average",
-                "function_parameters": {
-                    "num_lags": -10
-                },
-                "input_data_fields": [
-                    "bid_price_0",
-                    "ask_price_0"
-                ]
-            }
-        ],
-        "target": {
-            "input_data_fields": [
-                "mid_price"
-            ],
-            "function": "create_lag",
-            "function_parameters": {
-                "num_lags": -10
-            }
-        }
-    },
-    "Cut_Down_Limit_Order_Book": {
-        "data_type": "intraday",
-        "features": [
-            {
-                "name": "bid_price_0",
-                "input_data_fields": [
-                    "bid_price_0"
-                ],
-                "function": "raw_data"
-            },
-            {
-                "name": "bid_volume_0",
-                "input_data_fields": [
-                    "bid_volume_0"
-                ],
-                "function": "raw_data"
-            },
-            {
-                "name": "ask_price_0",
-                "input_data_fields": [
-                    "ask_price_0"
-                ],
-                "function": "raw_data"
-            },
-            {
-                "name": "ask_volume_0",
-                "input_data_fields": [
-                    "ask_volume_0"
-                ],
-                "function": "raw_data"
-            },
-            {
-                "name": "target",
-                "function": "create_lagged_average",
-                "function_parameters": {
-                    "num_lags": -10
-                },
-                "input_data_fields": [
-                    "bid_price_0",
-                    "ask_price_0"
-                ]
-            }
-        ],
-        "target": {
-            "input_data_fields": [
-                "mid_price"
-            ],
-            "function": "create_lag",
-            "function_parameters": {
-                "num_lags": -10
-            }
-        }
-    },
-    "Technical_Analysis_-_RSI": {
-        "data_type": "intraday",
-        "features": [
-            {
-                "name": "mid_price",
-                "input_data_fields": [
-                    "mid_price"
-                ],
-                "function": "raw_data"
-            },
-            {
-                "name": "rsi",
-                "input_data_fields": [
-                    "mid_price"
-                ],
-                "function": "create_rsi",
-                "function_parameters": {
-                    "window": 20
-                }
-            }
-        ],
-        "target": {
-            "input_data_fields": [
-                "mid_price"
-            ],
-            "function": "create_lag",
-            "function_parameters": {
-                "num_lags": -10
-            }
-        }
-    },
-    "Technical_Analysis_-_MACD": {
-        "data_type": "intraday",
-        "features": [
-            {
-                "name": "mid_price",
-                "input_data_fields": [
-                    "mid_price"
-                ],
-                "function": "raw_data"
-            },
-            {
-                "name": "macd",
-                "input_data_fields": [
-                    "mid_price"
-                ],
-                "function": "create_macd",
-                "function_parameters": {
-                    "window_slow": 26,
-                    "window_fast": 12,
-                    "window_sign": 9
-                }
-            }
-        ],
-        "target": {
-            "input_data_fields": [
-                "mid_price"
-            ],
-            "function": "create_lag",
-            "function_parameters": {
-                "num_lags": -10
-            }
-        }
-    },
-    "Technical_Analysis_-_Bollinger_Bands": {
-        "data_type": "intraday",
-        "features": [
-            {
-                "name": "mid_price",
-                "input_data_fields": [
-                    "mid_price"
-                ],
-                "function": "raw_data"
-            },
-            {
-                "name": "bollinger_band_high",
-                "input_data_fields": [
-                    "mid_price"
-                ],
-                "function": "create_bb_high",
-                "function_parameters": {
-                    "window": 20
-                }
-            },
-            {
-                "name": "bollinger_band_mid",
-                "input_data_fields": [
-                    "mid_price"
-                ],
-                "function": "create_bb_mid",
-                "function_parameters": {
-                    "window": 20
-                }
-            },
-            {
-                "name": "bollinger_band_low",
-                "input_data_fields": [
-                    "mid_price"
-                ],
-                "function": "create_bb_low",
-                "function_parameters": {
-                    "window": 20
-                }
-            }
-        ],
-        "target": {
-            "input_data_fields": [
-                "mid_price"
-            ],
-            "function": "create_lag",
-            "function_parameters": {
-                "num_lags": -10
-            }
-        }
-    },
-    "Sandbox_Intraday": {
-        "features": [
-            {
-                "function": "raw_data",
-                "function_parameters": null,
-                "input_data_fields": [
-                    "bid_price_0"
-                ],
-                "name": "bid_price_0"
-            },
-            {
-                "function": "raw_data",
-                "function_parameters": {},
-                "input_data_fields": [
-                    "ask_price_0"
-                ],
-                "name": "ask_price_0"
-            },
-            {
-                "name": "target",
-                "function": "lagged_average",
-                "function_parameters": {
-                    "num_lags": -10
-                },
-                "input_data_fields": [
-                    "bid_price_0",
-                    "ask_price_0"
-                ]
-            }    
-        ],
-        "target": {
-            "function": "create_lag",
-            "function_parameters": {
-                "num_lags": -10
-            },
-            "input_data_fields": [
-                "mid_price"
-            ]
-        },
-        "data_type": "intraday"
-    },
-    "Test_Set": {
-        "data_type": "daily",
-        "features": [],
-        "target": null
-    },
-    "Test_Set_Intraday": {
-        "data_type": "intraday",
-        "features": [],
-        "target": null
-    },
-    "Test_Feature_Set 1": {
-        "data_type": "test",
-        "features": [
-            {
-                "name": "feature1",
-                "function": "raw_data",
-                "input_data_fields": [
-                    "feature1"
-                ]
-            },
-            {
-                "name": "target",
-                "function": "lagged_average",
-                "function_parameters": {
-                    "num_lags": -10
-                },
-                "input_data_fields": [
-                    "bid_price_0",
-                    "ask_price_0"
-                ]
-            }    
-        ]
+      }
+    ],
+    "data_type": "daily",
+    "target": {
+      "input_data_fields": [
+        "close"
+      ],
+      "function": "create_lag",
+      "function_parameters": {
+        "num_lags": -1
+      }
     }
+  },
+  "Daily_data_historical 2": {
+    "features": [
+      {
+        "function": "raw_data",
+        "function_parameters": null,
+        "input_data_fields": [
+          "close"
+        ],
+        "name": "Close"
+      },
+      {
+        "function": "create_lag",
+        "function_parameters": {
+          "num_lags": 1
+        },
+        "input_data_fields": [
+          "close"
+        ],
+        "name": "Close_lagged_1"
+      },
+      {
+        "function": "create_lag",
+        "function_parameters": {
+          "num_lags": 2
+        },
+        "input_data_fields": [
+          "close"
+        ],
+        "name": "Close_lagged_2"
+      }
+    ],
+    "target": {
+      "function": "create_lag",
+      "function_parameters": {
+        "num_lags": -2
+      },
+      "input_data_fields": [
+        "close"
+      ]
+    },
+    "data_type": "daily"
+  },
+  "Daily_data_historical_10": {
+    "features": [
+      {
+        "function": "raw_data",
+        "function_parameters": null,
+        "input_data_fields": [
+          "close"
+        ],
+        "name": "Close"
+      },
+      {
+        "function": "create_lag",
+        "function_parameters": {
+          "num_lags": 1
+        },
+        "input_data_fields": [
+          "close"
+        ],
+        "name": "Close_lagged_1"
+      },
+      {
+        "function": "create_lag",
+        "function_parameters": {
+          "num_lags": 2
+        },
+        "input_data_fields": [
+          "close"
+        ],
+        "name": "Close_lagged_2"
+      },
+      {
+        "name": "target",
+        "function": "create_lag",
+        "function_parameters": {
+          "num_lags": -10
+        },
+        "input_data_fields": ["close"]
+      }
+    ],
+    "target": {
+      "function": "create_lag",
+      "function_parameters": {
+        "num_lags": -10
+      },
+      "input_data_fields": [
+        "close"
+      ]
+    },
+    "data_type": "daily"
+  },
+  "OHLCV": {
+    "features": [
+      {
+        "name": "volume",
+        "input_data_fields": [
+          "volume"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "open",
+        "input_data_fields": [
+          "open"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "high",
+        "input_data_fields": [
+          "high"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "low",
+        "input_data_fields": [
+          "low"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "close",
+        "input_data_fields": [
+          "close"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "target",
+        "function": "create_lag",
+        "function_parameters": {
+          "num_lags": -1
+        },
+        "input_data_fields": ["close"]
+      }
+    ],
+    "data_type": "daily",
+    "target": {
+      "input_data_fields": [
+        "close"
+      ],
+      "function": "create_lag",
+      "function_parameters": {
+        "num_lags": -1
+      }
+    }
+  },
+  "Limit_Order_Book": {
+    "data_type": "intraday",
+    "features": [
+      {
+        "name": "bid_price_4",
+        "input_data_fields": [
+          "bid_price_4"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "bid_volume_4",
+        "input_data_fields": [
+          "bid_volume_4"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "bid_price_3",
+        "input_data_fields": [
+          "bid_price_3"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "bid_volume_3",
+        "input_data_fields": [
+          "bid_volume_3"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "bid_price_2",
+        "input_data_fields": [
+          "bid_price_2"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "bid_volume_2",
+        "input_data_fields": [
+          "bid_volume_2"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "bid_price_1",
+        "input_data_fields": [
+          "bid_price_1"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "bid_volume_1",
+        "input_data_fields": [
+          "bid_volume_1"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "bid_price_0",
+        "input_data_fields": [
+          "bid_price_0"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "bid_volume_0",
+        "input_data_fields": [
+          "bid_volume_0"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "ask_price_0",
+        "input_data_fields": [
+          "ask_price_0"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "ask_volume_0",
+        "input_data_fields": [
+          "ask_volume_0"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "ask_price_1",
+        "input_data_fields": [
+          "ask_price_1"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "ask_volume_1",
+        "input_data_fields": [
+          "ask_volume_1"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "ask_price_2",
+        "input_data_fields": [
+          "ask_price_2"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "ask_volume_2",
+        "input_data_fields": [
+          "ask_volume_2"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "ask_price_3",
+        "input_data_fields": [
+          "ask_price_3"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "ask_volume_3",
+        "input_data_fields": [
+          "ask_volume_3"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "ask_price_4",
+        "input_data_fields": [
+          "ask_price_4"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "ask_volume_4",
+        "input_data_fields": [
+          "ask_volume_4"
+        ],
+        "function": "raw_data",
+        "function_parameters": null
+      },
+      {
+        "name": "target",
+        "function": "create_lagged_average",
+        "function_parameters": {
+          "num_lags": -10
+        },
+        "input_data_fields": [
+          "bid_price_0",
+          "ask_price_0"
+        ]
+      }
+    ],
+    "target": {
+      "input_data_fields": [
+        "mid_price"
+      ],
+      "function": "create_lag",
+      "function_parameters": {
+        "num_lags": -10
+      }
+    }
+  },
+  "Cut_Down_Limit_Order_Book": {
+    "data_type": "intraday",
+    "features": [
+      {
+        "name": "bid_price_0",
+        "input_data_fields": [
+          "bid_price_0"
+        ],
+        "function": "raw_data"
+      },
+      {
+        "name": "bid_volume_0",
+        "input_data_fields": [
+          "bid_volume_0"
+        ],
+        "function": "raw_data"
+      },
+      {
+        "name": "ask_price_0",
+        "input_data_fields": [
+          "ask_price_0"
+        ],
+        "function": "raw_data"
+      },
+      {
+        "name": "ask_volume_0",
+        "input_data_fields": [
+          "ask_volume_0"
+        ],
+        "function": "raw_data"
+      },
+      {
+        "name": "target",
+        "function": "create_lagged_average",
+        "function_parameters": {
+          "num_lags": -10
+        },
+        "input_data_fields": [
+          "bid_price_0",
+          "ask_price_0"
+        ]
+      }
+    ],
+    "target": {
+      "input_data_fields": [
+        "mid_price"
+      ],
+      "function": "create_lag",
+      "function_parameters": {
+        "num_lags": -10
+      }
+    }
+  },
+  "Technical_Analysis_-_RSI": {
+    "data_type": "intraday",
+    "features": [
+      {
+        "name": "mid_price",
+        "input_data_fields": [
+          "mid_price"
+        ],
+        "function": "raw_data"
+      },
+      {
+        "name": "rsi",
+        "input_data_fields": [
+          "mid_price"
+        ],
+        "function": "create_rsi",
+        "function_parameters": {
+          "window": 20
+        }
+      }
+    ],
+    "target": {
+      "input_data_fields": [
+        "mid_price"
+      ],
+      "function": "create_lag",
+      "function_parameters": {
+        "num_lags": -10
+      }
+    }
+  },
+  "Technical_Analysis_-_MACD": {
+    "data_type": "intraday",
+    "features": [
+      {
+        "name": "mid_price",
+        "input_data_fields": [
+          "mid_price"
+        ],
+        "function": "raw_data"
+      },
+      {
+        "name": "macd",
+        "input_data_fields": [
+          "mid_price"
+        ],
+        "function": "create_macd",
+        "function_parameters": {
+          "window_slow": 26,
+          "window_fast": 12,
+          "window_sign": 9
+        }
+      }
+    ],
+    "target": {
+      "input_data_fields": [
+        "mid_price"
+      ],
+      "function": "create_lag",
+      "function_parameters": {
+        "num_lags": -10
+      }
+    }
+  },
+  "Technical_Analysis_-_Bollinger_Bands": {
+    "data_type": "intraday",
+    "features": [
+      {
+        "name": "mid_price",
+        "input_data_fields": [
+          "mid_price"
+        ],
+        "function": "raw_data"
+      },
+      {
+        "name": "bollinger_band_high",
+        "input_data_fields": [
+          "mid_price"
+        ],
+        "function": "create_bb_high",
+        "function_parameters": {
+          "window": 20
+        }
+      },
+      {
+        "name": "bollinger_band_mid",
+        "input_data_fields": [
+          "mid_price"
+        ],
+        "function": "create_bb_mid",
+        "function_parameters": {
+          "window": 20
+        }
+      },
+      {
+        "name": "bollinger_band_low",
+        "input_data_fields": [
+          "mid_price"
+        ],
+        "function": "create_bb_low",
+        "function_parameters": {
+          "window": 20
+        }
+      }
+    ],
+    "target": {
+      "input_data_fields": [
+        "mid_price"
+      ],
+      "function": "create_lag",
+      "function_parameters": {
+        "num_lags": -10
+      }
+    }
+  },
+  "Sandbox_Intraday": {
+    "data_type": "intraday",
+    "features": [
+      {
+        "function": "raw_data",
+        "function_parameters": null,
+        "input_data_fields": [
+          "bid_price_0"
+        ],
+        "name": "bid_price_0"
+      },
+      {
+        "function": "raw_data",
+        "function_parameters": {},
+        "input_data_fields": [
+          "ask_price_0"
+        ],
+        "name": "ask_price_0"
+      },
+      {
+        "function": "create_lagged_average",
+        "function_parameters": {
+          "num_lags": -10
+        },
+        "input_data_fields": [
+          "bid_price_0",
+          "ask_price_0"
+        ],
+        "name": "target"
+      }
+    ]
+  },
+  "Test_Set": {
+    "data_type": "daily",
+    "features": [],
+    "target": null
+  },
+  "Test_Set_Intraday": {
+    "data_type": "intraday",
+    "features": [],
+    "target": null
+  },
+  "Test_Feature_Set 1": {
+    "data_type": "test",
+    "features": [
+      {
+        "name": "feature1",
+        "function": "raw_data",
+        "input_data_fields": [
+          "feature1"
+        ]
+      },
+      {
+        "name": "target",
+        "function": "create_lagged_average",
+        "function_parameters": {
+          "num_lags": -10
+        },
+        "input_data_fields": [
+          "bid_price_0",
+          "ask_price_0"
+        ]
+      }
+    ]
+  }
 }

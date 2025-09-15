@@ -240,3 +240,70 @@
     max-width: 200px;
   }
 }
+
+/* Toggle buttons */
+.toggle-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.toggle-buttons button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+  cursor: pointer;
+  border-radius: 4px;
+  color: #007bff;
+}
+
+.toggle-buttons button.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+/* Yahoo form styling */
+.yahoo-form-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.yahoo-form {
+  background: #f0f4ff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  width: 300px;
+}
+
+.yahoo-form h3 {
+  margin-bottom: 1rem;
+  color: black;
+}
+
+.yahoo-form label {
+  display: block;
+  margin-bottom: 1rem;
+  color: black;
+}
+
+.yahoo-form input,
+.yahoo-form select {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+  color: black;
+}
+
+.yahoo-form button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  width: 100%;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}

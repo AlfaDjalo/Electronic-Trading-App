@@ -29,10 +29,10 @@ class ModelHandler:
         self.params = params
         self.model = None
 
-        self.verbose = verbose
-
         self.window_generator = window_generator
         self.target = target
+
+        self.verbose = verbose
 
     def get_data(self):
         """Getter for ModelHandler data"""

@@ -9,16 +9,12 @@ export const ModelForm = ({
     // ensure initialValues is never null
     const safeInitial = initialValues || {};
 
-    const [selectedModel, setSelectedModel] = useState(
-        safeInitial.model || Object.keys(modelConfig)[0] || ""
-    );
-    const [selectedFeatureSet, setSelectedFeatureSet] = useState(
-        safeInitial.featureSet || featureSets[0] || ""
-    );
-    const [normalise, setNormalise] = useState(
-        safeInitial.normalise ?? false
-    );
+    const [selectedModel, setSelectedModel] = useState(safeInitial.model || Object.keys(modelConfig)[0] || "");
+    const [selectedFeatureSet, setSelectedFeatureSet] = useState(safeInitial.featureSet || featureSets[0] || "");
+    const [normalise, setNormalise] = useState(safeInitial.normalise ?? false);
     const [params, setParams] = useState(safeInitial.params || {});
+    const [forecastPeriod, setForecastPeriod] = useState(safeInitial.forecastPeriod || 1);
+    const [inputWidth, setInputWidth] = useState(safeInitial.inputWidth || 1);
 
     // Fix: Access parameters directly, not under a 'parameters' property
     const parametersForModel = selectedModel ? modelConfig[selectedModel] || {} : {};
@@ -33,6 +29,8 @@ export const ModelForm = ({
         setSelectedFeatureSet(iv.featureSet || featureSets[0] || "");
         setNormalise(iv.normalise ?? false);
         setParams(iv.params || {});
+        setForecastPeriod(iv.forecastPeriod || 1);
+        setInputWidth(iv.inputWidth || 1);
     }, [initialValues, featureSets, modelConfig]);
 
     const handleSubmit = (e) => {
@@ -47,6 +45,8 @@ export const ModelForm = ({
             featureSet: selectedFeatureSet,
             normalise,
             params,
+            forecastPeriod,
+            inputWidth
         });
         // Reset only in Add mode
         if (!safeInitial.id) {
@@ -54,6 +54,8 @@ export const ModelForm = ({
             setSelectedFeatureSet(featureSets[0] || "");
             setNormalise(false);
             setParams({});
+            setForecastPeriod(1);
+            setInputWidth(1);
         }
     };
 
@@ -96,6 +98,36 @@ export const ModelForm = ({
                             </option>
                         ))}
                     </select>
+                </div>
+
+                <div>
+                    <label className="block mb-1 text-sm font-medium text-gray-700">
+                        Forecast Period
+                    </label>
+                    <input
+                        type="number"
+                        min={1}
+                        max={365}   // <-- you can adjust this max as needed
+                        step={1}
+                        value={forecastPeriod}
+                        onChange={(e) => setForecastPeriod(parseInt(e.target.value, 10) || 1)}
+                        className="min-w-[150px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+
+                <div>
+                    <label className="block mb-1 text-sm font-medium text-gray-700">
+                        Input Width
+                    </label>
+                    <input
+                        type="number"
+                        min={1}
+                        max={365}   // <-- you can adjust this max as needed
+                        step={1}
+                        value={inputWidth}
+                        onChange={(e) => setInputWidth(parseInt(e.target.value, 10) || 1)}
+                        className="min-w-[150px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
+                    />
                 </div>
 
                 <div className="flex items-center gap-2">

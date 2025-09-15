@@ -24,8 +24,8 @@ export const Navbar = ( {menuOpen, setMenuOpen} ) => {
 
                     <div className="hidden md:flex items-center space-x-8">
                         <NavLink
-                            to="/"
-                            // to="/load_data"
+                            // to="/"
+                            to="/load_data"
                             className={({ isActive }) =>
                                 isActive
                                 ? "text-white font-semibold"
@@ -47,17 +47,6 @@ export const Navbar = ( {menuOpen, setMenuOpen} ) => {
                         </NavLink>
 
                         <NavLink
-                            to="/select_model"
-                            className={({ isActive }) =>
-                                isActive
-                                ? "text-white font-semibold"
-                                : "text-gray-300 hover:text-white transition-colors"
-                            }
-                        >
-                            Select Model
-                        </NavLink>
-
-                        <NavLink
                             to="/manage_feature_sets"
                             className={({ isActive }) =>
                                 isActive
@@ -66,6 +55,17 @@ export const Navbar = ( {menuOpen, setMenuOpen} ) => {
                             }
                         >
                             Manage Feature Sets
+                        </NavLink>
+
+                        <NavLink
+                            to="/select_model"
+                            className={({ isActive }) =>
+                                isActive    
+                                ? "text-white font-semibold"
+                                : "text-gray-300 hover:text-white transition-colors"        
+                            }
+                        >
+                            Select Model
                         </NavLink>
 
                         <NavLink

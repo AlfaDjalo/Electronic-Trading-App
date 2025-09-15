@@ -948,46 +948,46 @@ def setup_routes(app):
         print(session["data_type"])
         return redirect(url_for("comparison_page"))
 
-    @app.route('/get_tickers/<category>', methods=['GET'])
-    def get_tickers(category):
-        """
-        Fetch tickers for the given category.
+    # @app.route('/get_tickers/<category>', methods=['GET'])
+    # def get_tickers(category):
+    #     """
+    #     Fetch tickers for the given category.
 
-        Args:
-            category (str): The selected category.
+    #     Args:
+    #         category (str): The selected category.
 
-        Returns:
-            Response: JSON response containing the list of tickers.
-        """
-        tickers = get_tickers_by_category(category)
-        return jsonify({'tickers': tickers})
+    #     Returns:
+    #         Response: JSON response containing the list of tickers.
+    #     """
+    #     tickers = get_tickers_by_category(category)
+    #     return jsonify({'tickers': tickers})
 
-    def get_tickers_by_category(category):
-        # Helper function to fetch tickers based on category
-        tickers = []
+# def get_tickers_by_category(category):
+#     # Helper function to fetch tickers based on category
+#     tickers = []
 
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+#     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
-        if (category == 'australian'):
-            url = "https://en.wikipedia.org/wiki/S%26P/ASX_200"
-            response = requests.get(url, headers=headers)
-            asx200 = pd.read_html(response.text)[2]
-            # asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
-            tickers = asx200[['Code', 'Company']].to_dict(orient="records")
-        elif (category == 'us'):
-            url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-            response = requests.get(url, headers=headers)
-            sp500 = pd.read_html(response.text)[0]
-            # sp500 = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
-            sp500['Symbol'] = sp500['Symbol'].str.replace('.', '-')
-            tickers = sp500[['Symbol', 'Security']].rename(columns={'Symbol': 'Code', 'Security': 'Company'}).to_dict(orient="records")
-        elif (category == 'fx'):
-            tickers = [{'Code': 'AUDUSD=X', 'Company': 'AUDUSD'}]
-        elif (category == 'crypto'):
-            tickers = [{'Code': 'BTC-USD', 'Company': 'Bitcoin'}]
-        elif (category == 'test'):
-            tickers = [{'Code': 'flat', 'Company': 'Flat Co.'}, {'Code': 'ramp', 'Company': 'Ramp Co.'}, {'Code': 'wave', 'Company': 'Wave Co.'}]
-        return tickers
+#     if (category == 'australian'):
+#         url = "https://en.wikipedia.org/wiki/S%26P/ASX_200"
+#         response = requests.get(url, headers=headers)
+#         asx200 = pd.read_html(response.text)[2]
+#         # asx200 = pd.read_html('https://en.wikipedia.org/wiki/S%26P/ASX_200')[2]
+#         tickers = asx200[['Code', 'Company']].to_dict(orient="records")
+#     elif (category == 'us'):
+#         url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+#         response = requests.get(url, headers=headers)
+#         sp500 = pd.read_html(response.text)[0]
+#         # sp500 = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
+#         sp500['Symbol'] = sp500['Symbol'].str.replace('.', '-')
+#         tickers = sp500[['Symbol', 'Security']].rename(columns={'Symbol': 'Code', 'Security': 'Company'}).to_dict(orient="records")
+#     elif (category == 'fx'):
+#         tickers = [{'Code': 'AUDUSD=X', 'Company': 'AUDUSD'}]
+#     elif (category == 'crypto'):
+#         tickers = [{'Code': 'BTC-USD', 'Company': 'Bitcoin'}]
+#     elif (category == 'test'):
+#         tickers = [{'Code': 'flat', 'Company': 'Flat Co.'}, {'Code': 'ramp', 'Company': 'Ramp Co.'}, {'Code': 'wave', 'Company': 'Wave Co.'}]
+#     return tickers
 
 AVAILABLE_FIELDS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\available_fields.json"  # Add this line
 

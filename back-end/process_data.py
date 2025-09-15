@@ -1,149 +1,220 @@
-import json
+"""Data processing pipeline for time series modeling.
+
+This module defines the `DataProcessor` class, which orchestrates the
+end-to-end preparation of time series data for machine learning. The
+pipeline includes:
+    - Feature engineering
+    - Train/validation/test splitting
+    - Normalization
+    - Windowed dataset generation
+
+Intended for use with forecasting models in the Electronic Trading App.
+"""
+
+# Standard library imports
+
+# Third-party imports
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
-class ProcessData:
-    def __init__(self, data: pd.DataFrame, feature_set: dict = None):
+# Local application imports
+from feature_engineer import FeatureEngineer
+from data_splitter import DataSplitter
+from window_generator import WindowGenerator
+
+
+class DataProcessor:
+    """Orchestrates feature engineering, splitting, normalization, and windowing.
+
+    Attributes:
+        raw_df (pd.DataFrame): The raw input dataframe.
+        feature_set (list[dict]): Features to generate or include.
+        forecast_period (int): Prediction horizon in timesteps.
+        normalise (bool): Whether to normalize numeric features.
+        train_ratio (float): Proportion of data to allocate to training.
+        val_ratio (float): Proportion of data to allocate to validation.
+        df (pd.DataFrame): Processed dataframe after feature engineering.
+        train_df (pd.DataFrame): Training split dataframe.
+        val_df (pd.DataFrame): Validation split dataframe.
+        test_df (pd.DataFrame): Test split dataframe.
+        normalizer (Normalizer | None): Fitted normalizer/scaler.
+        window (WindowGenerator): Windowed datasets for ML models.
+    """
+
+
+    def __init__(self, raw_data, feature_set, forecast_period=1, input_width=1, normalise=True, train_ratio=0.8, val_ratio=0.1):
+        """Initializes the data processing pipeline.
+
+        Args:
+            raw_data (pd.DataFrame): Raw input data.
+            feature_set (list[dict]): Feature definitions or column names.
+            forecast_period (int, optional): Prediction horizon in timesteps.
+                Defaults to 1.
+            normalise (bool, optional): Whether to normalize numeric features.
+                Defaults to True.
+            train_ratio (float, optional): Proportion of data for training.
+                Defaults to 0.8.
+            val_ratio (float, optional): Proportion of data for validation.
+                Defaults to 0.1.
         """
-        data: raw time series DataFrame with at least a 'date' column
-        feature_set: dict describing features & target (from JSON config)
-        """
-        if "date" not in data.columns:
-            raise ValueError("Input data must contain a 'date' column.")
+        print("Creating DataProcessor.")
 
-        self.data = data.copy()
-        self.feature_set = feature_set or {}
-        self.features = []
-        self.target = None
-        self.normalisation_params = {}
-        self.is_normalised = False
+        self.raw_df = pd.DataFrame(raw_data)
+        self.feature_set = feature_set
+        self.forecast_period = forecast_period
+        self.input_width = input_width
+        self.normalise = normalise
+        self.train_ratio = train_ratio
+        self.val_ratio = val_ratio
 
-        # Storage for splits
-        self.train_df = None
-        self.val_df = None
-        self.test_df = None
+        # Step 1: Feature engineering
+        fe = FeatureEngineer(self.raw_df, feature_set)
+        self.df = fe.apply().dropna()
 
-    # ------------------------------------------------
-    # Representation
-    # ------------------------------------------------
-    def __repr__(self):
-        return f"<ProcessData rows={len(self.data)}, features={len(self.features)}, target={self.target}>"
+        print(self.df.head(5))
+        print("Features engineered.")
 
-    # ------------------------------------------------
-    # Feature Engineering
-    # ------------------------------------------------
-    def create_lag(self, input_field, num_lags=1, **kwargs):
-        field = input_field[0]
-        return pd.concat(
-            [self.data[field].shift(i).rename(f"{field}_lag{i}") for i in range(1, num_lags+1)],
-            axis=1
+        # Step 2: Splitting
+        splitter = DataSplitter(self.df, train_ratio, val_ratio)
+        self.train_df, self.val_df, self.test_df = splitter.split()
+
+        print(self.train_df.head(5))
+        print("Data split.")
+
+        # Step 3: Normalisation (optional)
+        self.scaler = None
+        if self.normalise:
+            numeric_cols = self.train_df.select_dtypes(include=["number"]).columns
+            self.numeric_cols = numeric_cols
+
+            self.scaler = StandardScaler()
+            self.scaler.fit(self.train_df[numeric_cols])
+
+            self.train_df.loc[:, numeric_cols] = self.scaler.transform(self.train_df[numeric_cols])
+            self.val_df.loc[:, numeric_cols]   = self.scaler.transform(self.val_df[numeric_cols])
+            self.test_df.loc[:, numeric_cols]  = self.scaler.transform(self.test_df[numeric_cols])
+
+        print(self.train_df.head(5))
+        print("Data normalised.")        
+        
+        # Step 4: Windowing (using forecastPeriod)
+        self.window = WindowGenerator(
+            input_width=self.input_width,
+            label_width=self.forecast_period,
+            shift=self.forecast_period,
+            train_df=self.train_df,
+            val_df=self.val_df,
+            test_df=self.test_df,
+            label_columns=["target"]
         )
 
-    def create_rsi(self, input_field, window=14, **kwargs):
-        field = input_field[0]
-        delta = self.data[field].diff()
-        gain = delta.where(delta > 0, 0).rolling(window).mean()
-        loss = -delta.where(delta < 0, 0).rolling(window).mean()
-        rs = gain / loss
-        return pd.Series(100 - (100 / (1 + rs)), name=f"{field}_RSI{window}")
+        print("Data processed.")
+        
+    def get_data(self):
+        """
+        Return processed datasets in a format usable by ModelHandler.
 
-    def calculate_log_returns(self, input_field, **kwargs):
-        field = input_field[0]
-        return pd.Series(
-            pd.Series(self.data[field]).pct_change().apply(lambda x: pd.np.log1p(x)),
-            name=f"{field}_logret"
+        Returns:
+            dict: {
+                'train': windowed training dataset,
+                'val': windowed validation dataset,
+                'test': windowed test dataset,
+                'x_train': pd.DataFrame of training features,
+                'y_train': pd.Series of training targets,
+                'x_val': pd.DataFrame of validation features,
+                'y_val': pd.Series of validation targets,
+                'x_test': pd.DataFrame of test features,
+                'y_test': pd.Series of test targets
+            }
+        """
+        # Keep numeric columns only
+        self.train_df = self.train_df.select_dtypes(include=["number"])
+        self.val_df   = self.val_df.select_dtypes(include=["number"])
+        self.test_df  = self.test_df.select_dtypes(include=["number"])
+
+        # Split features and target
+        target_col = self.get_target()
+        x_train, y_train = self.train_df.drop(columns=[target_col]), self.train_df[target_col]
+        x_val,   y_val   = self.val_df.drop(columns=[target_col]),   self.val_df[target_col]
+        x_test,  y_test  = self.test_df.drop(columns=[target_col]),  self.test_df[target_col]
+
+        # Rebuild window generator with clean data
+        self.window = WindowGenerator(
+            input_width=self.input_width,
+            label_width=self.forecast_period,
+            shift=self.forecast_period,
+            train_df=self.train_df,
+            val_df=self.val_df,
+            test_df=self.test_df,
+            label_columns=[target_col]
         )
-
-    # ------------------------------------------------
-    # Apply feature set
-    # ------------------------------------------------
-    def apply_feature_set(self):
-        """
-        Apply features and target definition from feature_set JSON.
-        """
-        if not self.feature_set:
-            raise ValueError("No feature set defined.")
-
-        for feature in self.feature_set.get("features", []):
-            method_name = feature["method"]
-            input_field = feature["input"]
-            method = getattr(self, method_name, None)
-            if not method:
-                raise RuntimeError(f"Feature method '{method_name}' not implemented")
-
-            new_feature = method(input_field, **feature.get("params", {}))
-            if isinstance(new_feature, pd.Series):
-                self.data[new_feature.name] = new_feature
-                self.features.append(new_feature.name)
-            elif isinstance(new_feature, pd.DataFrame):
-                for col in new_feature.columns:
-                    self.data[col] = new_feature[col]
-                    self.features.append(col)
-
-        # Target
-        target_conf = self.feature_set.get("target", {})
-        if target_conf:
-            field = target_conf["input"][0]
-            method_name = target_conf["method"]
-            method = getattr(self, method_name, None)
-            if not method:
-                raise RuntimeError(f"Target method '{method_name}' not implemented")
-
-            self.data["target"] = method(target_conf["input"], **target_conf.get("params", {}))
-            self.target = "target"
-
-        # Drop rows with NaNs (common after lagging/rolling)
-        self.data.dropna(inplace=True)
-
-    # ------------------------------------------------
-    # Train/Val/Test split
-    # ------------------------------------------------
-    def split_data(self, test_size=0.2, val_size=0.1, shuffle=False):
-        """
-        Split data into train/val/test.
-        """
-        train_df, test_df = train_test_split(self.data, test_size=test_size, shuffle=shuffle)
-
-        # Further split validation from train
-        train_df, val_df = train_test_split(train_df, test_size=val_size, shuffle=shuffle)
-
-        self.train_df, self.val_df, self.test_df = train_df, val_df, test_df
-
-    # ------------------------------------------------
-    # Normalisation
-    # ------------------------------------------------
-    def normalise(self):
-        """
-        Normalise features and target based on train statistics.
-        """
-        if self.is_normalised:
-            return
-
-        if self.train_df is None:
-            raise RuntimeError("Must call split_data() before normalisation.")
-
-        mean = self.train_df[self.features].mean()
-        std = self.train_df[self.features].std().replace(0, 1)
-
-        for df in [self.train_df, self.val_df, self.test_df]:
-            df[self.features] = (df[self.features] - mean) / std
-
-        self.normalisation_params = {"mean": mean.to_dict(), "std": std.to_dict()}
-        self.is_normalised = True
-
-    # ------------------------------------------------
-    # Prepare for API response
-    # ------------------------------------------------
-    def to_dict(self, max_rows=500):
-        """
-        Convert processed data into JSON-serializable dict for API.
-        """
-        preview = self.data.head(max_rows).to_dict(orient="records")
 
         return {
-            "features": self.features,
-            "target": self.target,
-            "normalisation_params": self.normalisation_params,
-            "preview": preview,
-            "num_rows": len(self.data),
+            "train": self.window.train,
+            "val": self.window.val,
+            "test": self.window.test,
+            "x_train": x_train,
+            "y_train": y_train,
+            "x_val": x_val,
+            "y_val": y_val,
+            "x_test": x_test,
+            "y_test": y_test
         }
+
+    def get_window(self):
+        """Return window.
+
+        Returns:
+            WindowGenerator.
+        """   
+        return self.window
+    
+    def get_target(self):
+        """Return name of target feature.
+
+        Returns:
+            string: name of target feature.
+        """   
+        return "target"
+    
+    def get_normalise(self):
+        """Return normalise indicator.
+
+        Returns:
+            bool: indicator of whether to normalise numeric columns.
+        """   
+        return self.normalise
+    
+    def get_normalisation_params(self, col):
+        """Return normalisation parameters.
+
+        Args:
+            col: the column for which the normalisation parameters are required.
+
+        Returns:
+            dictionary: { mean, std } for the given column.
+        """   
+        if not self.scaler or col not in self.numeric_cols:
+            return None
+        idx = list(self.numeric_cols).index(col)
+        return {
+            "mean": self.scaler.mean_[idx],
+            "std": self.scaler.scale_[idx]
+        }
+
+    def inverse_transform(self, arr, col):
+        """Return inverse transform of given time series.
+
+        Args:
+            arr (np.array ?): time series to be de-normalised.
+            col (int): column of time series, so that normalisation parameters can be retrieved.
+
+        Returns:
+            np array ?: de-normalised time series.
+        """   
+        if not self.scaler or col not in self.numeric_cols:
+            return arr
+        idx = list(self.numeric_cols).index(col)
+        mean, std = self.scaler.mean_[idx], self.scaler.scale_[idx]
+        return (arr * std) + mean

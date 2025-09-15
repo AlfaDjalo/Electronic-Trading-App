@@ -49,6 +49,8 @@ class FeatureSetManager:
         Returns:
             dict: The feature set dictionary, or None if not found.
         """
+        # print("get_feature_set:")
+        # print(self.feature_set_dictionary.get(name))
         return self.feature_set_dictionary.get(name)
 
     def add_feature_set(self, name, data):

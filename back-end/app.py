@@ -6,10 +6,13 @@ from api_routes import setup_api_routes
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Add a secret key for session management
-CORS(app)
+# CORS(app)
+# Allow all origins (for local dev)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 Bootstrap(app)
-setup_routes(app)
+# setup_routes(app)
 setup_api_routes(app)
+
 
 # Use a flag to ensure the logic runs only once
 first_request_handled = False

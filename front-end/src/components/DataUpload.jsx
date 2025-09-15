@@ -1,7 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './DataUpload.css';
+// import { TickerFetcher } from "./TickerFetcher";
 
 export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName }) => {
+  const [mode, setMode] = useState("csv");
+  const [category, setCategory] = useState("");
+  const [tickers, setTickers] = useState([]);
+  const [ticker, setTicker] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const [selectedFileName, setSelectedFileName] = useState(uploadedFileName || null);
   const [uploadStatus, setUploadStatus] = useState(uploadedFileName ? "success" : "idle");
   const [errorMessage, setErrorMessage] = useState('');
@@ -18,6 +26,20 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
     }
   }, [uploadedFileName]);
   
+  useEffect(() => {
+    console.log(category)
+    if (category) {
+      fetch(`http://localhost:5000/api/get_tickers/${category}`)
+        .then((res) => res.json())
+        .then((data) => setTickers(data.tickers || []))
+        .catch((err) => console.error("Error fetching tickers:", err));
+      }
+  }, [category]);
+
+  useEffect(() => {
+    console.log("📊 tickers state updated:", tickers);
+  }, [tickers]);
+
   // FILE VALIDATION FUNCTION
   // This runs on the client side before uploading to catch obvious issues early
   const validateFile = (fileName) => {
@@ -61,20 +83,22 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
     setErrorMessage('');
     setUploadStatus('idle');
     setUploadProgress(0);
+
+    // Automatically trigger upload
+    handleUpload(fileName);
   };
 
   // FILE INPUT CHANGE HANDLER
   // Triggered when user uses the file picker dialog
   const handleFileInputChange = (event) => {
-    const fileName = event.target.files[0]; // Get the first (and only) selected file
+    const fileName = event.target.files[0];
     handleFileSelect(fileName);
   };
 
   // DRAG AND DROP HANDLERS
   // These provide a more modern UX for file selection
-  
   const handleDragOver = (event) => {
-    event.preventDefault(); // Prevent default behavior (opening file in browser)
+    event.preventDefault();
     event.stopPropagation();
   };
 
@@ -91,35 +115,19 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
   const handleDrop = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    
-    // Get the dropped files
     const files = event.dataTransfer.files;
     if (files.length > 0) {
-      handleFileSelect(files[0]); // Only take the first file
+      handleFileSelect(files[0]);
     }
   };
 
   // UPLOAD FUNCTION
   // This sends the file to your Python backend API
-  const handleUpload = async () => {
-    if (!selectedFileName) {
+  const handleUpload = async (fileToUpload) => {
+    const file = fileToUpload || selectedFileName;
+    if (!file) {
       setErrorMessage("Please select a file first");
       return;
-    }
-
-    // Test from ChatGPT
-    async function uploadCSV(fileName) {
-      const formData = new FormData();
-      formData.append("fileName", fileName); // key MUST match Flask: "file"
-
-      // const res = await fetch("http://localhost:5000/api/upload-csv", {
-      const res = await fetch("http://localhost:5000/api/upload_data", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      console.log("Upload result:", data);
     }
 
     // Update status to show upload is starting
@@ -128,16 +136,11 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
     setUploadProgress(0);
 
     try {
-      // Create FormData object to send file as multipart/form-data
-      // This is the standard way to upload files via HTTP
       const formData = new FormData();
-      formData.append('fileName', selectedFileName); // 'fileName' is the key your Python API will look for
+      formData.append('fileName', file);
 
-      // Create XMLHttpRequest to track upload progress
-      // fetch() doesn't support upload progress tracking
       const xhr = new XMLHttpRequest();
 
-      // Set up progress tracking
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable) {
           const percentComplete = (event.loaded / event.total) * 100;
@@ -145,24 +148,17 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
         }
       });
 
-      // Set up the response handlers
       xhr.onload = function() {
         if (xhr.status === 200) {
-          // Success! Parse the JSON response
           const response = JSON.parse(xhr.responseText);
           setUploadStatus('success');
           setUploadProgress(100);
-          
-          // Call the parent component's success handler with the results
-          // This is how we pass the optimization results up to the main app
           if (onUploadSuccess) {
-            onUploadSuccess(response, selectedFileName);
+            onUploadSuccess(response, file);
           }
         } else {
-          // HTTP error status
           setUploadStatus('error');
           setErrorMessage(`Upload failed: ${xhr.status} ${xhr.statusText}`);
-          
           if (onUploadError) {
             onUploadError(`Upload failed: ${xhr.status} ${xhr.statusText}`);
           }
@@ -170,27 +166,20 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
       };
 
       xhr.onerror = function() {
-        // Network error
         setUploadStatus('error');
         setErrorMessage('Network error occurred during upload');
-        
         if (onUploadError) {
           onUploadError('Network error occurred during upload');
         }
       };
 
-      // Send the request to your Python API
-      // TODO: Replace with your actual API endpoint URL
-      // xhr.open('POST', 'http://localhost:5000/api/upload-csv', true);
       xhr.open('POST', 'http://localhost:5000/api/upload_data', true);
       xhr.send(formData);
 
     } catch (error) {
-      // Unexpected error
       console.error('Upload error:', error);
       setUploadStatus('error');
       setErrorMessage('An unexpected error occurred');
-      
       if (onUploadError) {
         onUploadError('An unexpected error occurred');
       }
@@ -211,6 +200,26 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
     }
   };
 
+  const handleYahooSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch("http://localhost:5000/api/yahoo_data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticker, startDate, endDate }),
+      });
+      const json = await response.json();
+      if (json.success) {
+        onUploadSuccess?.(json, "yahoo");
+      } else {
+        setErrorMessage(json.error || "Failed to load Yahoo Finance data");
+      }
+    } catch (err) {
+      console.error("Yahoo load error:", err);
+      setErrorMessage("Network error while loading Yahoo Finance data");
+    }
+  };
+
   // FORMAT FILE SIZE FOR DISPLAY
   // Converts bytes to human-readable format
   const formatFileSize = (bytes) => {
@@ -224,74 +233,172 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
   // COMPONENT RENDER
   return (
     <div className="data-upload">
-      <h2>Upload Portfolio Data</h2>
-      <p>Select a CSV file containing time series returns for your features</p>
+      <h2>Load Data</h2>
 
-      {/* DRAG & DROP AREA */}
-      <div 
-        className={`upload-area ${uploadStatus === 'uploading' ? 'uploading' : ''}`}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()} // Click to open file picker
-      >
-        {/* HIDDEN FILE INPUT */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileInputChange}
-          accept=".csv"
-          style={{ display: 'none' }}
-        />
-
-        {/* UPLOAD AREA CONTENT */}
-        {!selectedFileName ? (
-          <div className="upload-prompt">
-            <div className="upload-icon">📁</div>
-            <p>Click to select a CSV file or drag and drop here</p>
-            <p className="upload-hint">Maximum file size: 10MB</p>
-          </div>
-        ) : (
-          <div className="file-selected">
-            <div className="file-icon">📄</div>
-            <div className="file-info">
-              <p className="file-name">{selectedFileName.name}</p>
-              <p className="file-size">{formatFileSize(selectedFileName.size)}</p>
-              <p className={`file-status ${uploadStatus}`}>
-                {uploadStatus === 'success' && '✅ Uploaded successfully'}
-                {uploadStatus === 'uploading' && `⏳ Uploading... ${uploadProgress}%`}
-                {uploadStatus === 'error' && `⚠️ Error: ${errorMessage}`}
-                {uploadStatus === 'idle' && '📄 Ready to upload'}
-              </p>
-            </div>
-              {uploadStatus !== 'uploading' && (
-                <button 
-                  className="clear-button"
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent triggering the file picker
-                    handleClear();
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-          </div>
-        )}
+      {/* Toggle buttons */}
+      <div className="toggle-buttons">
+        <button
+          className={mode === "csv" ? "active" : ""}
+          onClick={() => setMode("csv")}
+        >
+          Load CSV File
+        </button>
+        <button
+          className={mode === "yahoo" ? "active" : ""}
+          onClick={() => setMode("yahoo")}
+        >
+          Load from Yahoo Finance
+        </button>       
       </div>
 
+      {mode === "csv" ? (
+        <>
+          <p>Select a CSV file containing time series returns for your features</p>
+
+          {/* DRAG & DROP AREA */}
+          <div 
+            className={`upload-area ${uploadStatus === 'uploading' ? 'uploading' : ''}`}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()} // Click to open file picker
+          >
+            {/* HIDDEN FILE INPUT */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileInputChange}
+              accept=".csv"
+              style={{ display: 'none' }}
+            />
+
+            {/* UPLOAD AREA CONTENT */}
+            {!selectedFileName ? (
+              <div className="upload-prompt">
+                <div className="upload-icon">📁</div>
+                <p>Click to select a CSV file or drag and drop here</p>
+                <p className="upload-hint">Maximum file size: 10MB</p>
+              </div>
+            ) : (
+              <div className="file-selected">
+                <div className="file-icon">📄</div>
+                <div className="file-info">
+                  <p className="file-name">{selectedFileName.name}</p>
+                  <p className="file-size">{formatFileSize(selectedFileName.size)}</p>
+                  <p className={`file-status ${uploadStatus}`}>
+                    {uploadStatus === 'success' && '✅ Uploaded successfully'}
+                    {uploadStatus === 'uploading' && `⏳ Uploading... ${uploadProgress}%`}
+                    {uploadStatus === 'error' && `⚠️ Error: ${errorMessage}`}
+                    {uploadStatus === 'idle' && '📄 Ready to upload'}
+                  </p>
+                </div>
+                  {uploadStatus !== 'uploading' && (
+                    <button 
+                    className="clear-button"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering the file picker
+                      handleClear();
+                      }}
+                      >
+                      ✕
+                    </button>
+                  )}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Yahoo Finance Data */}
+          <form onSubmit={handleYahooSubmit} className="p-4 border rounded space-y-4">
+            <h3 className="font-semibold mb-2">Fetch Yahoo Data</h3>
+
+            {/* <TickerFetcher
+              category={category}
+              onCategoryChange={setCategory}
+              ticker={ticker}
+              onTickerChange={setTicker}
+              onTickersLoaded={setTickers}
+            /> */}
+
+            <div>
+              <label className="block">Category:</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="border p-2 rounded w-full bg-white text-black"
+              >
+                <option value="">Select Category</option>
+                <option value="australian">Australian (ASX200)</option>
+                <option value="us">US (S&P 500)</option>
+                <option value="fx">FX</option>
+                <option value="crypto">Crypto</option>
+                <option value="test">Test</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block">Ticker:</label>
+              <select
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value)}
+                className="border p-2 rounded w-full bg-white text-black"
+                disabled={!tickers.length}
+              >
+                <option value="">Select Ticker</option>
+                {tickers
+                  .filter((t) => t.Code && t.Company)
+                  .map((t, idx) => (
+                    <option key={`${t.Code}-${idx}`} value={t.Code}>
+                      {t.Code} – {t.Company}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block">Start Date:</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="border p-2 rounded w-full bg-white text-black"
+              />
+            </div>
+
+            <div>
+              <label className="block">End Date:</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="border p-2 rounded w-full bg-white text-black"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Fetch Data
+            </button>
+          </form>  
+        </>
+      )}
+
       {/* UPLOAD PROGRESS BAR */}
-      {uploadStatus === 'uploading' && (
+      {/* {uploadStatus === 'uploading' && (
         <div className="progress-container">
           <div className="progress-bar">
             <div 
               className="progress-fill"
               style={{ width: `${uploadProgress}%` }}
-            ></div>
+              ></div>
           </div>
           <p>Uploading... {uploadProgress}%</p>
         </div>
-      )}
+      )} */}
 
       {/* ERROR MESSAGE DISPLAY */}
       {uploadStatus === 'error' && errorMessage && (
@@ -302,32 +409,26 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
       )}
 
       {/* SUCCESS MESSAGE */}
-      {uploadStatus === 'success' && (
+      {/* {uploadStatus === 'success' && (
         <div className="success-message">
           <span className="success-icon">✅</span>
           File uploaded and processed successfully!
         </div>
-      )}
+      )} */}
 
       {/* ACTION BUTTONS */}
-      <div className="button-container">
-        <button 
-          className="upload-button"
-          onClick={handleUpload}
-          disabled={!selectedFileName || uploadStatus === 'uploading'}
-        >
-          {uploadStatus === 'uploading' ? 'Processing...' : 'Upload'}
-        </button>
-
-        {selectedFileName && uploadStatus !== 'uploading' && (
+      {/* <div className="button-container"> */}
+        {/* Remove Upload button */}
+        {/* Only show "Choose Different File" if a file is selected and not uploading */}
+        {/* {selectedFileName && uploadStatus !== 'uploading' && (
           <button 
-            className="clear-button-secondary"
-            onClick={handleClear}
+          className="clear-button-secondary"
+          onClick={handleClear}
           >
             Choose Different File
           </button>
         )}
-      </div>
+      </div> */}
     </div>
   );
 };

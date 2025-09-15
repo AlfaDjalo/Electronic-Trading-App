@@ -6,6 +6,7 @@ import "./index.css"
 import { Navbar } from "./components/Navbar"
 import { MobileMenu } from "./components/MobileMenu"
 import { DataUpload } from './components/DataUpload';
+// import { DataSourceSelector } from './components/DataSourceSelector';
 import { ViewData } from "./components/ViewData";
 import { ViewResults } from "./components/ViewResults";
 import { ModelSelect } from "./components/ModelSelect";
@@ -54,6 +55,20 @@ function App() {
     .catch((err) => console.error("Failed to load functions", err));
   }, []);
   
+  const handleDataLoad = (json) => {
+    if (json.success) {
+      setRawData(json.timeSeriesData);
+
+      // If backend also provides feature sets for this dataset
+      if (json.featureSets) {
+        setFeatureSets(json.featureSets);
+      }
+    } else {
+      console.error("Failed to load data:", json.error);
+    }
+  };
+
+
   // Handle successful CSV upload
   const handleUploadSuccess = (results, fileName) => {
     console.log('Upload successful:', results.success);
@@ -161,11 +176,21 @@ function App() {
         <div className="pt-16">
           <Routes>
 
-            {/* Data Upload */}
             <Route
               path="/"
               element={
                 <div>
+                  <h2> Electronic Trading App</h2>
+                </div>
+              }
+            />
+
+            {/* Data Upload */}
+            <Route
+              path="/load_data"
+              element={
+                <div>
+                  {/* <DataSourceSelector onUploadSuccess={handleDataLoad} /> */}
                   <DataUpload 
                     onUploadSuccess={(results, fileName) =>
                       handleUploadSuccess(results, fileName)
@@ -211,7 +236,7 @@ function App() {
                     <ModelSelect
                       modelNames={modelNames}
                       modelConfig={modelConfig}
-                      featureSets={featureSets}
+                      featureSets={availableFeatureSets}
                       modelList={modelList}
                       onAddModel={addModel}
                       onDelete={deleteModel}
