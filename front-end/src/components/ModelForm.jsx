@@ -8,9 +8,10 @@ export const ModelForm = ({
 }) => {
     // ensure initialValues is never null
     const safeInitial = initialValues || {};
-
     const [selectedModel, setSelectedModel] = useState(safeInitial.model || Object.keys(modelConfig)[0] || "");
-    const [selectedFeatureSet, setSelectedFeatureSet] = useState(safeInitial.featureSet || featureSets[0] || "");
+    const [selectedFeatureSet, setSelectedFeatureSet] = useState(
+        safeInitial.featureSet || (featureSets[0]?.name ?? "")
+        );
     const [normalise, setNormalise] = useState(safeInitial.normalise ?? false);
     const [params, setParams] = useState(safeInitial.params || {});
     const [forecastPeriod, setForecastPeriod] = useState(safeInitial.forecastPeriod || 1);
@@ -19,6 +20,21 @@ export const ModelForm = ({
     // Fix: Access parameters directly, not under a 'parameters' property
     const parametersForModel = selectedModel ? modelConfig[selectedModel] || {} : {};
 
+    const getAvailableFeatureSets = (selectedModel) => {
+        if (selectedModel === 'baseline') {
+            return featureSets.filter(fs => fs.name.startsWith('Baseline_'));
+        }
+        return featureSets.filter(fs => !fs.name.startsWith('Baseline_'));
+    };
+
+    const handleModelChange = (newModel) => {
+        setSelectedModel(newModel);
+        const availableSets = getAvailableFeatureSets(newModel);
+        if (!availableSets.includes(selectedFeatureSet)) {
+            setSelectedFeatureSet(availableSets[0].name || '');
+        }
+    };
+
     const handleParamChange = (key, value) => {
         setParams(prev => ({ ...prev, [key]: value }));
     };
@@ -26,7 +42,7 @@ export const ModelForm = ({
     useEffect(() => {
         const iv = initialValues || {};
         setSelectedModel(iv.model || Object.keys(modelConfig)[0] || "");
-        setSelectedFeatureSet(iv.featureSet || featureSets[0] || "");
+        setSelectedFeatureSet(iv.featureSet || (featureSets[0]?.name ?? ""));
         setNormalise(iv.normalise ?? false);
         setParams(iv.params || {});
         setForecastPeriod(iv.forecastPeriod || 1);
@@ -38,20 +54,31 @@ export const ModelForm = ({
 
         const autoName = `${selectedModel}-${selectedFeatureSet}`;
         
-        onSubmit({
+        const fullParams = Object.entries(modelConfig[selectedModel] || {}).reduce(
+            (acc, [key, def]) => {
+                acc[key] = params[key] ?? def.default ?? def;
+                return acc;
+            },
+            {}
+        );
+
+        const data = {
             ...safeInitial,
             name: autoName,
             model: selectedModel,
             featureSet: selectedFeatureSet,
             normalise,
-            params,
+            params: fullParams,
             forecastPeriod,
-            inputWidth
-        });
+            inputWidth,
+        };
+        console.log("Submitting model data:", data);
+        onSubmit(data);
+
         // Reset only in Add mode
         if (!safeInitial.id) {
             setSelectedModel(Object.keys(modelConfig)[0] || "");
-            setSelectedFeatureSet(featureSets[0] || "");
+            setSelectedFeatureSet(featureSets[0]?.name ?? "");
             setNormalise(false);
             setParams({});
             setForecastPeriod(1);
@@ -72,7 +99,8 @@ export const ModelForm = ({
                     </label>
                     <select
                         value={selectedModel}
-                        onChange={(e) => setSelectedModel(e.target.value)}
+                        onChange={(e) => handleModelChange(e.target.value)}
+                        // onChange={(e) => setSelectedModel(e.target.value)}
                         className="min-w-[200px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
                     >
                         {Object.keys(modelConfig).map((m) => (
@@ -87,14 +115,16 @@ export const ModelForm = ({
                     <label className="block mb-1 text-sm font-medium text-gray-700">
                         Feature Set
                     </label>
+
                     <select
                         value={selectedFeatureSet}
                         onChange={(e) => setSelectedFeatureSet(e.target.value)}
                         className="min-w-[200px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
                     >
-                        {featureSets.map((f) => (
-                            <option key={f} value={f}>
-                                {f}
+                        {getAvailableFeatureSets(selectedModel).map((f) => (
+                        // {featureSets.map((f) => (
+                            <option key={f.name} value={f.name}>
+                                {f.name}
                             </option>
                         ))}
                     </select>
@@ -142,6 +172,7 @@ export const ModelForm = ({
             </div>
 
             {/* Right Column: Parameters */}
+            {console.log("Rendering params for model:", selectedModel, modelConfig[selectedModel])}
             <div className="space-y-4">
                 {selectedModel &&
                     Object.entries(modelConfig[selectedModel] || {}).map(
@@ -152,7 +183,7 @@ export const ModelForm = ({
                                 </label>
                                 <input
                                     type="text"
-                                    value={params[param] ?? def.default}
+                                    value={params[param] ?? def.default ?? def ?? ""}
                                     onChange={(e) =>
                                         setParams({ ...params, [param]: e.target.value })
                                     }

@@ -6,45 +6,93 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
+# from sklearn.linear_model import LinearRegression
+# from sklearn.metrics import mean_squared_error, r2_score
 
-import keras.initializers
-from keras.models import Sequential
-from keras.layers import Dense, Layer, LSTM, GRU, SimpleRNN, RNN
-from keras.regularizers import l1, l2
-from keras.callbacks import EarlyStopping
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Conv1D, Flatten, Dense, Concatenate
+# import keras.initializers
+# from keras.models import Sequential
+# from keras.layers import Dense, Layer, LSTM, GRU, SimpleRNN, RNN
+# from keras.regularizers import l1, l2
+# from keras.callbacks import EarlyStopping
+# from tensorflow.keras.models import Model
+# from tensorflow.keras.layers import Input, Conv1D, Flatten, Dense, Concatenate
 
-from alphaRNN import AlphaRNN
-from alphatRNN import AlphatRNN  # Import AlphaRNN and AlphatRNN modules
+# from alphaRNN import AlphaRNN
+# from alphatRNN import AlphatRNN  # Import AlphaRNN and AlphatRNN modules
 
 from models import *
+# from keras_models  import create_model
 # from models import Baseline, KerasLinearRegression, KerasLSTM, KerasCNN, KerasMLP
 
 class ModelHandler:
-    def __init__(self, data, params, window_generator, target, verbose=False):
-        self.data = data
+    def __init__(self, processed_data, params, target, verbose=False):
+    # def __init__(self, data, params, window_generator, target, verbose=False):
+        # self.data = data
         self.params = params
+        self.target = target
+        self.verbose = verbose
         self.model = None
 
-        self.window_generator = window_generator
-        self.target = target
+        # self.window_generator = window_generator
 
-        self.verbose = verbose
+        # --- Unpack processed_data ---
+        self.window_train = processed_data.get("train")
+        self.window_val   = processed_data.get("val")
+        self.window_test  = processed_data.get("test")
 
-    def get_data(self):
-        """Getter for ModelHandler data"""
-        return self.data
+        self.x_train = processed_data.get("x_train")
+        self.y_train = processed_data.get("y_train")
+        self.x_val   = processed_data.get("x_val")
+        self.y_val   = processed_data.get("y_val")
+        self.x_test  = processed_data.get("x_test")
+        self.y_test  = processed_data.get("y_test")
+
+    # def get_data(self):
+    #     """Getter for ModelHandler data"""
+    #     return self.data
+
+    def run_model(self, model_name):
+        input_shape = (self.x_train.shape[1], self.x_train.shape[2])
+        output_size = self.y_train.shape[1] if self.y_train.ndim > 1 else 1
+
+        self.model = create_model(model_name, **self.params)
+
+        self.model.build_model(input_shape=input_shape, output_size=output_size)
+        self.model.model.compile(
+            optimizer=self.params.get("optimizer", "adam"),
+            loss=self.params.get("loss", "mse"),
+            metrics=["mae"]
+        )
+        history=self.model.model.fit(
+            self.x_train, self.y_train,
+            validation_data=(self.x_val, self.y_val),
+            epochs=self.params.get("epochs", 20),
+            batch_size=self.params.get("batch_size", 32),
+            verbose=1 if self.verbose else 0
+        )
+
+        if self.verbose:
+            print(f"Build {model_name} with input {input_shape} -> output {output_size}")
+
+        return history
+
+
+    def build(self, model_name, **kwargs):
+        input_shape = (self.x_train.shape[1], self.x_train.shape[2])
+        output_size = self.y_train.shape[1] if self.y_train.ndim > 1 else 1
+
+        self.model = create_model(model_name, **kwargs)
+        self.model.build_model(input_shape=input_shape, output_size=output_size)
+        if self.verbose:
+            print(f"Build {model_name} with input {input_shape} -> output {output_size}")
 
     def get_params(self):
         """Getter for ModelHandler params"""
         return self.params
 
-    def set_data(self, data):
-        """Setter for ModelHandler data"""
-        self.data = data
+    # def set_data(self, data):
+    #     """Setter for ModelHandler data"""
+    #     self.data = data
         
     def set_params(self, params):
         """Setter for ModelHandler data"""
@@ -60,17 +108,40 @@ class ModelHandler:
         else:
             method()
 
-    def baseline(self):
-        """Model predicting no change - future price = current price."""
-        self.model = Baseline(self.target)
-        self.model.build_model(self.window_generator)
-        self.model.fit(self.window_generator)
-        # self.model = Baseline(window_generator, target)
-        # self.model = Baseline(label_index=self.data['train_df'])
-        # self.model.compile(loss=tf.keras.losses.MeanSquaredError(), metrics=[tf.keras.metrics.MeanAbsoluteError()])
-        # self.model.fit()
+    # def baseline(self):
+    #     """Model predicting no change - future price = current price."""
+    #     self.model = Baseline(self.target)
+    #     self.model.build_model(self.window_generator)
+    #     self.model.fit(self.window_generator)
 
-        return
+    #     return
+
+    def baseline(self):
+        """Baseline model: predict that the next value = last observed value."""
+        if self.target not in self.window_train.element_spec[1].shape[-1] and self.verbose:
+            print(f"⚠️ Warning: Target '{self.target}' not found in label columns.")
+
+        label_index = (
+            self.window_train.element_spec[1].shape[-1] - 1
+            if self.target is None else 0
+        )
+
+        self.model = Baseline(label_index=label_index)
+
+        # No need to "build_model" — tf.keras.Model builds automatically on first call
+        self.model.compile(
+            loss=tf.keras.losses.MeanSquaredError(),
+            metrics=[tf.keras.metrics.MeanAbsoluteError()]
+        )
+
+        history = self.model.fit(
+            self.window_train,
+            epochs=5,
+            validation_data=self.window_val
+        )
+
+        return history
+
 
     def keras_regression(self):
         """Perform simple regression."""
@@ -201,7 +272,7 @@ class ModelHandler:
         """Perform simple regression."""
 
         self.model = LinearRegression(fit_intercept=True)
-        self.model.fit(self.data['x_train'], self.data['y_train'])
+        self.model.fit(self.x_train, self.y_train)
 
         return
 
@@ -214,7 +285,7 @@ class ModelHandler:
         seed = self.params.get('seed', {}).get('value', 0)
         activation = self.params.get('activation', {}).get('value', 'tanh')
 
-        x_train = self.data['x_train'].values.reshape(self.data['x_train'].shape[0], self.data['x_train'].shape[1], 1)
+        x_train = self.x_train.values.reshape(self.x_train.shape[0], self.x_train.shape[1], 1)
 
         def SimpleRNN_():
             model = Sequential()
@@ -230,7 +301,7 @@ class ModelHandler:
 
         tf.random.set_seed(seed)
         self.model = SimpleRNN_()
-        self.model.fit(x_train, self.data['y_train'], epochs=epochs, 
+        self.model.fit(x_train, self.y_train, epochs=epochs, 
                   batch_size=batch_size, callbacks=[es], shuffle=False)
 
         return
@@ -272,7 +343,7 @@ class ModelHandler:
             bias_initializer=keras.initializers.glorot_uniform(seed),
             recurrent_initializer=keras.initializers.orthogonal(seed),
             kernel_regularizer=l1(l1_reg),
-            input_shape=(self.data['x_train'].shape[1], 1),
+            input_shape=(self.x_train.shape[1], 1),
             unroll=True,
             stateful=False
         ))
@@ -304,7 +375,7 @@ class ModelHandler:
                 bias_initializer=keras.initializers.glorot_uniform(seed),
                 recurrent_initializer=keras.initializers.orthogonal(seed),
                 kernel_regularizer=l1(l1_reg),
-                input_shape=(self.data['x_train'].shape[1], 1),
+                input_shape=(self.x_train.shape[1], 1),
                 unroll=True
             ))
             # print("Second add")
@@ -336,7 +407,7 @@ class ModelHandler:
             bias_initializer=keras.initializers.glorot_uniform(seed),
             recurrent_initializer=keras.initializers.orthogonal(seed),
             kernel_regularizer=l1(l1_reg),
-            input_shape=(self.data['x_train'].shape[1], 1),
+            input_shape=(self.x_train.shape[1], 1),
             unroll=True
         ))
         model.add(Dense(
@@ -363,7 +434,7 @@ class ModelHandler:
             bias_initializer=keras.initializers.glorot_uniform(seed),
             recurrent_initializer=keras.initializers.orthogonal(seed),
             kernel_regularizer=l1(l1_reg),
-            input_shape=(self.data['x_train'].shape[1], 1),
+            input_shape=(self.x_train.shape[1], 1),
             unroll=True
         ))
         model.add(Dense(
@@ -391,7 +462,7 @@ class ModelHandler:
             bias_initializer=keras.initializers.glorot_uniform(seed),
             recurrent_initializer=keras.initializers.orthogonal(seed),
             kernel_regularizer=l1(l1_reg),
-            input_shape=(self.data['x_train'].shape[1], 1),
+            input_shape=(self.x_train.shape[1], 1),
             unroll=True
         ))
         model.add(Dense(
@@ -409,7 +480,7 @@ class ModelHandler:
         batch_size = self.params.get('batch_size', {}).get('value', 1000)
         # print("In model, parameters loaded")
 
-        x_train = self.data['x_train'].values.reshape(self.data['x_train'].shape[0], self.data['x_train'].shape[1], 1)
+        x_train = self.x_train.values.reshape(self.x_train.shape[0], self.x_train.shape[1], 1)
         es = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
         # print("In model, data transformed")
 
@@ -417,7 +488,7 @@ class ModelHandler:
         # print("In model, model_function specified")
 
         try:
-            self.model.fit(x_train, self.data['y_train'], epochs=epochs, batch_size=batch_size, callbacks=[es], shuffle=False)
+            self.model.fit(x_train, self.y_train, epochs=epochs, batch_size=batch_size, callbacks=[es], shuffle=False)
         except Exception as e:
             # print(f"Error during model.add: {str(e)}")
             raise  # Re-raise the exception after logging it
@@ -529,24 +600,24 @@ class ModelHandler:
         # print(self.data['x_train'])
 
         # Prepare train data
-        bid_prices_train = self.data['x_train'][bid_price_cols].values
-        bid_volumes_train = self.data['x_train'][bid_volume_cols].values
-        ask_prices_train = self.data['x_train'][ask_price_cols].values
-        ask_volumes_train = self.data['x_train'][ask_volume_cols].values
-        target_train = self.data['y_train'].values
+        bid_prices_train = self.x_train[bid_price_cols].values
+        bid_volumes_train = self.x_train[bid_volume_cols].values
+        ask_prices_train = self.x_train[ask_price_cols].values
+        ask_volumes_train = self.x_train[ask_volume_cols].values
+        target_train = self.y_train.values
 
         # print(bid_prices_train)
 
         # Prepare test data
-        bid_prices_test = self.data['x_test'][bid_price_cols].values
-        bid_volumes_test = self.data['x_test'][bid_volume_cols].values
-        ask_prices_test = self.data['x_test'][ask_price_cols].values
-        ask_volumes_test = self.data['x_test'][ask_volume_cols].values
-        target_test = self.data['y_test'].values
+        bid_prices_test = self.x_test[bid_price_cols].values
+        bid_volumes_test = self.x_test[bid_volume_cols].values
+        ask_prices_test = self.x_test[ask_price_cols].values
+        ask_volumes_test = self.x_test[ask_volume_cols].values
+        target_test = self.y_test.values
         
         # Number of samples
-        n_train_samples = len(self.data['x_train'])
-        n_test_samples = len(self.data['x_test'])
+        n_train_samples = len(self.x_train)
+        n_test_samples = len(self.x_test)
         
         # print("n_train_samples", n_train_samples)
 
@@ -643,8 +714,8 @@ class ModelHandler:
         validation_split = self.params.get('validation_split', {}).get('value', 0.2)
 
         # Prepare data
-        cnn_x_train = self.prepare_cnn_input(self.data['x_train'])
-        cnn_x_test = self.prepare_cnn_input(self.data['x_test'])
+        cnn_x_train = self.prepare_cnn_input(self.x_train)
+        cnn_x_test = self.prepare_cnn_input(self.x_test)
         
         # print("cnn_x_train")
         # print(cnn_x_train)
@@ -680,7 +751,7 @@ class ModelHandler:
         # Train the model
         history = self.model.fit(
             cnn_x_train,
-            self.data["y_train"],
+            self.y_train,
             epochs=epochs,
             batch_size=batch_size,
             validation_split=validation_split,

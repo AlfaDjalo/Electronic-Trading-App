@@ -1,5 +1,64 @@
 # Backend Modules
 
+## `model_service.py`
+
+### `process_models_request()`
+- **Purpose**: Main business logic function that processes ML requests from the API layer.
+- **Parameters**:
+  - `raw_data_list`: (list[dict]) - Time series data in API format (list of records)
+  - `model_list`: (list[dict]) - Model configurations to run
+  - `hyperparameters`: (dict) - Training parameters including train/val/test split
+  - `feature_sets_file`: (str) - Path to feaure sets configuration
+  - `verbose`: (bool, default: False) - Enable detailed logging
+- **Returns**:
+  - `dict` with keys: `success`, `dates`, `actual`, `predictions`, `stats`, `errors`, `metadata`
+- **Functionality**
+ - Input validation (data format, required fields, model list)
+ - Data conversion (list -> Dataframe)
+ - Creates `ModelRunner` with real components
+ - Processes each model with error isolation
+ - Aggregates results with metadata
+- **Error Handling**: Graceful degradation - continues processing other models if one fails
+
+
+## `training/runner.py`
+
+### `ModelRunner`
+- **Purpose**: Handles running multiple models with shared data processing.
+- **Parameters**:
+  - `raw_data`: (Pandas dataframe) - Dataframe of time series data
+  - `feature_set_manager`: (FeatureSetManager object) - Object containing feature set dictionary
+  - `hyperparameters`: (dict) - Training parameters including train/val/test split
+  - `verbose`: (bool, default: False) - Enable detailed logging
+- **Returns**:
+  - `dict` with keys: `dates`, `actual`, `predictions`, `stats`
+- **Functionality**
+  - Manages cache of processed data
+  - Creates `ModelConfig` with architecture and training parameters
+  - Creates `ModelTrainer` 
+  - Runs models
+
+
+## `training/trainer.py`
+
+### `ModelTrainer`
+- **Purpose**: Handles model training and evaluations.
+- **Parameters**:
+  - `config`: (ModelConfig object) - Model configuration
+  - `verbose`: (bool, default: False) - Enable detailed logging
+- **Returns**:
+  - fitted model
+  - `dict` for model evaluation with keys: `metrics`, `actual`, `predictions`, `stats`
+- **Functionality**
+  - Creates model based on model config
+  - Trains model
+  - Evaluates model  
+
+
+
+
+
+
 ## `process_data.py`
 
 ### `DataProcessor`
@@ -70,18 +129,29 @@
 ## Program Flow (Mermaid)
 ```mermaid
 flowchart TD
-    A[Raw Data] --> B[DataProcessor]
-
-    subgraph B[DataProcessor]
-        B1[FeatureEngineering]
-        B2[DataNormalization]
-        B3[SplitData]
-        B4[WindowGenerator]
+    A[API Request] --> B[model_service.process_models_request]
+    
+    B --> C[Input Validation]
+    C --> D[ModelRunner]
+    
+    subgraph D[ModelRunner - Batch Processing]
+        D1[Group by Data Config]
+        D2[Check Cache]
+        D3[DataProcessor]
+        D4[ModelTrainer]
     end
-
-    A --> B1
-    B1 --> B2
-    B2 --> B3
-    B3 --> B4
-    B4 --> C[Train/Val/Test Windows]
-    C --> D[Model Training]
+    
+    D1 --> D2
+    D2 -->|Cache Miss| D3
+    D2 -->|Cache Hit| D4
+    D3 --> D4
+    
+    subgraph D4[ModelTrainer]
+        D4A[ModelFactory]
+        D4B[Model.build/compile]
+        D4C[Model.fit]
+        D4D[Model.evaluate]
+    end
+    
+    D4 --> E[Aggregate Results]
+    E --> F[API Response]

@@ -5,7 +5,7 @@ import pandas as pd
 class WindowGenerator():
     def __init__(self, input_width, label_width, shift,
                 train_df, val_df, test_df,
-                label_columns=None):
+                label_columns=["target"]):
         # Store the raw data.
         self.train_df = train_df
         self.val_df = val_df
@@ -44,7 +44,9 @@ class WindowGenerator():
     def split_window(self, features):
         inputs = features[:, self.input_slice, :]
         labels = features[:, self.labels_slice, :]
-
+        print("Input indices:", self.input_indices)
+        print("Label indices:", self.label_indices)
+        
         if self.label_columns is not None:
             labels = tf.stack(
                 [labels[:, :, self.column_indices[name]] for name in self.label_columns],

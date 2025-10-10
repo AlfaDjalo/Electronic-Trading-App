@@ -185,12 +185,22 @@ def test_run_models_with_mock(mocker, client):
     model_list = [{"name": "baseline-Test", "model": "baseline"}]
 
     # Mock run_model to avoid heavy ML
-    mocker.patch("api_routes.run_model", return_value={
-        "dates": ["2023-01-02 00:00:00"],
-        "actual": [105],
-        "predictions": {"baseline-Test": [106]},
-        "stats": {"baseline-Test": {"mse": 1.0}},
-    })
+    mocker.patch(
+        "training.runner.ModelRunner.run_single_model",
+        return_value={
+            "dates": ["2023-01-02 00:00:00"],
+            "actual": [105],
+            "predictions": {"baseline-Test": [106]},
+            "stats": {"baseline-Test": {"mse": 1.0}},
+        }
+    )
+
+    # mocker.patch("api_routes.run_model", return_value={
+    #     "dates": ["2023-01-02 00:00:00"],
+    #     "actual": [105],
+    #     "predictions": {"baseline-Test": [106]},
+    #     "stats": {"baseline-Test": {"mse": 1.0}},
+    # })
 
     response = client.post("/api/run_models", json={
         "rawData": raw_data,

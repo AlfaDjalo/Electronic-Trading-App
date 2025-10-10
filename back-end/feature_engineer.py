@@ -3,7 +3,6 @@ class FeatureEngineer:
         print("Creating FeatureEngineer.")
         # print(feature_set_config)
         self.data = raw_df.copy()
-        # self.df = raw_df.copy()
         self.config = feature_set_config
     
     def apply(self):
@@ -38,12 +37,15 @@ class FeatureEngineer:
             # print(f"Feature '{name}' created successfully.")
             
             # Compute feature column
-            if function != "raw_data":
-                if function_parameters:
-                    self.data[name] = method(input_data_fields, **function_parameters)
-                else:
-                    self.data[name] = method(input_data_fields)
-                print(f"Feature '{name}' created successfully.")
+
+            # if function == "raw_data":
+            #         self.data[name] = 
+            # else:
+            if function_parameters:
+                self.data[name] = method(input_data_fields, **function_parameters)
+            else:
+                self.data[name] = method(input_data_fields)
+            print(f"Feature '{name}' created successfully.")
 
             print(self.data.head(5))
             # Track features/target

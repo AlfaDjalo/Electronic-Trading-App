@@ -38,7 +38,8 @@ export const ModelSelect = ({
       {/* <ModelAdd onAddModel={onAddModel} modelNames={modelNames} featureSets={featureSets} /> */}
       <ModelForm
         modelConfig={modelConfig}
-        featureSets={Object.keys(featureSets || {})}
+        featureSets={featureSets}
+        // featureSets={Object.keys(featureSets || {})}
         initialValues={editingModel}
         onSubmit={editingModel ? handleUpdate : handleAdd}
       />
@@ -66,7 +67,7 @@ export const ModelSelect = ({
               <tr key={m.id}>
                 <td className="border p-2">{m.name}</td>
                 <td className="border p-2">{m.model}</td>
-                <td className="border p-2">{m.featureSet}</td>
+                <td className="border p-2">{m.featureSet.name}</td>
                 <td className="border p-2">{m.forecastPeriod}</td>
                 <td className="border p-2">{m.inputWidth}</td>
                 <td className="border p-2">{m.normalise ? "Yes" : "No"}</td>

@@ -61,7 +61,7 @@ class DataProcessor:
         print("Creating DataProcessor.")
 
         self.raw_df = pd.DataFrame(raw_data)
-        self.feature_set = feature_set
+        self.feature_set_def = feature_set
         self.forecast_period = forecast_period
         self.input_width = input_width
         self.normalise = normalise
@@ -71,6 +71,37 @@ class DataProcessor:
         # Step 1: Feature engineering
         fe = FeatureEngineer(self.raw_df, feature_set)
         self.df = fe.apply().dropna()
+
+        # Explicitly enforce target creation
+        target_col = self.get_target()
+        print(target_col)
+        print(self.df.columns)
+        if target_col not in self.df.columns:
+            raise ValueError(f"Target column '{target_col}' missing after feature engineering.")
+
+        # Filter: keep only declared features + target
+        feature_names = [f["name"] for f in self.feature_set_def.get("features", [])]
+        keep_cols = feature_names
+        # keep_cols = feature_names + [target_col]
+        self.df = self.df[keep_cols]
+
+        print("Final engineered columns:", self.df.columns.tolist())
+
+        # Filter to only keep columns that were engineered
+        # feature_set here is a list of column names like ["price", "volume", "target"]
+        # if isinstance(self.feature_set, list) and all(isinstance(f, str) for f in self.feature_set):
+        #     # feature_set is list of column names
+        #     self.df = self.df[self.feature_set]
+        # else:
+        #     # If feature_set is in dict format, extract the column names
+        #     # This shouldn't happen with your current setup, but handle it anyway
+        #     pass  # Let FeatureEngineer handle it
+
+        # # Filter to only keep columns specified in feature_set
+        # feature_columns = [f for f in self.feature_set if f != "target"]
+        # if "target" not in feature_columns:
+        #     feature_columns.append("target")
+        # self.df = self.df[feature_columns]
 
         print(self.df.head(5))
         print("Features engineered.")
@@ -94,14 +125,14 @@ class DataProcessor:
             self.train_df.loc[:, numeric_cols] = self.scaler.transform(self.train_df[numeric_cols])
             self.val_df.loc[:, numeric_cols]   = self.scaler.transform(self.val_df[numeric_cols])
             self.test_df.loc[:, numeric_cols]  = self.scaler.transform(self.test_df[numeric_cols])
+            print("Data normalised.")        
 
         print(self.train_df.head(5))
-        print("Data normalised.")        
         
         # Step 4: Windowing (using forecastPeriod)
         self.window = WindowGenerator(
             input_width=self.input_width,
-            label_width=self.forecast_period,
+            label_width=1,
             shift=self.forecast_period,
             train_df=self.train_df,
             val_df=self.val_df,
@@ -111,6 +142,13 @@ class DataProcessor:
 
         print("Data processed.")
         
+        example_inputs, example_labels = next(iter(self.window.train))
+        print("inputs:", example_inputs.shape)
+        print("labels:", example_labels.shape)
+        print(example_inputs[0, :, 0])
+        print(example_labels[0, :, 0])
+
+
     def get_data(self):
         """
         Return processed datasets in a format usable by ModelHandler.
@@ -129,9 +167,9 @@ class DataProcessor:
             }
         """
         # Keep numeric columns only
-        self.train_df = self.train_df.select_dtypes(include=["number"])
-        self.val_df   = self.val_df.select_dtypes(include=["number"])
-        self.test_df  = self.test_df.select_dtypes(include=["number"])
+        # self.train_df = self.train_df.select_dtypes(include=["number"])
+        # self.val_df   = self.val_df.select_dtypes(include=["number"])
+        # self.test_df  = self.test_df.select_dtypes(include=["number"])
 
         # Split features and target
         target_col = self.get_target()
@@ -169,14 +207,30 @@ class DataProcessor:
             WindowGenerator.
         """   
         return self.window
-    
+        
     def get_target(self):
-        """Return name of target feature.
+        """Return the target column name."""
+        # Case 1: explicit top-level target (preferred format)
+        if "target" in self.feature_set_def:
+            return "target"
 
-        Returns:
-            string: name of target feature.
-        """   
-        return "target"
+        # Case 2: target embedded in features list
+        for f in self.feature_set_def.get("features", []):
+            if f["name"] == "target":
+                return "target"
+
+        raise ValueError("No target specified in feature set definition.")    
+    # def get_target(self):
+    #     """Return the name of the target column as defined in the feature set config."""
+    #     if isinstance(self.feature_set, dict) and "target" in self.feature_set:
+    #         # Explicitly defined in JSON
+    #         target_fields = self.feature_set["target"].get("input_data_fields", [])
+    #         if target_fields:
+    #             # Use first field or enforce one target
+    #             return self.feature_set["target"].get("name", target_fields[0])
+    #         return self.feature_set["target"].get("name", "target")
+    #     else:
+    #         raise ValueError("No target specified in feature set definition.")
     
     def get_normalise(self):
         """Return normalise indicator.

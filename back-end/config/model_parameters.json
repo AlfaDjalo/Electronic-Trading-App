@@ -1,0 +1,142 @@
+{
+    "baseline":{
+    },
+    "linear": {
+        "learning_rate": {
+            "type": "float",
+            "default": 0.01,
+            "min": 0.001,
+            "max": 0.1
+        },
+        "epochs": {
+            "type": "integer",
+            "default": 1000,
+            "min": 10,
+            "max": 10000
+        },
+        "batch_size": {
+            "type": "integer",
+            "default": 256,
+            "min": 64,
+            "max": 4096
+        },
+        "loss": {
+            "type": "category",
+            "default": "mean_squared_error",
+            "values": [
+                "mean_squared_error"
+            ]
+        },
+        "optimizer": {
+            "type": "category",
+            "default": "adam",
+            "values": [
+                "adam"
+            ]
+        }
+    },
+    "mlp": {
+        "learning_rate": {
+            "type": "float",
+            "default": 0.01,
+            "min": 0.001,
+            "max": 0.1
+        },
+        "num_units": {
+            "type": "integer",
+            "default": 64,
+            "min": 1,
+            "max": 100
+        },
+        "l1_reg": {
+            "type": "float",
+            "default": 0.0,
+            "min": 0.0,
+            "max": 1.0
+        },
+        "dropout_rate": {
+            "type": "float",
+            "default": 0.2,
+            "min": 0.0,
+            "max": 1.0
+        },
+        "epochs": {
+            "type": "integer",
+            "default": 100,
+            "min": 10,
+            "max": 1000
+        },
+        "batch_size": {
+            "type": "integer",
+            "default": 256,
+            "min": 64,
+            "max": 4096
+        },
+        "loss": {
+            "type": "category",
+            "default": "mean_squared_error",
+            "values": [
+                "mean_squared_error"
+            ]
+        },
+        "optimizer": {
+            "type": "category",
+            "default": "adam",
+            "values": [
+                "adam"
+            ]
+        } 
+    },
+    "lstm": {
+        "learning_rate": {
+            "type": "float",
+            "default": 0.01,
+            "min": 0.001,
+            "max": 0.1
+        },
+        "num_units": {
+            "type": "integer",
+            "default": 64,
+            "min": 1,
+            "max": 100
+        },
+        "l1_reg": {
+            "type": "float",
+            "default": 0.0,
+            "min": 0.0,
+            "max": 1.0
+        },
+        "dropout_rate": {
+            "type": "float",
+            "default": 0.2,
+            "min": 0.0,
+            "max": 1.0
+        },
+        "epochs": {
+            "type": "integer",
+            "default": 100,
+            "min": 10,
+            "max": 1000
+        },
+        "batch_size": {
+            "type": "integer",
+            "default": 256,
+            "min": 64,
+            "max": 4096
+        },
+        "loss": {
+            "type": "category",
+            "default": "mean_squared_error",
+            "values": [
+                "mean_squared_error"
+            ]
+        },
+        "optimizer": {
+            "type": "category",
+            "default": "adam",
+            "values": [
+                "adam"
+            ]
+        } 
+    }
+}

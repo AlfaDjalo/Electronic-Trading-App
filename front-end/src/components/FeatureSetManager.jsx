@@ -14,9 +14,14 @@ export const FeatureSetManager = ({ availableFeatureSets, seriesNames, functionL
     }
   }, [availableFeatureSets]);
 
-  const handleFeatureSetChange = (featureSetName) => {
-    setSelectedFeatureSet(featureSetName);
-    setCurrentFeatureSet(availableFeatureSets[featureSetName] || null);
+  // const handleFeatureSetChange = (featureSetName) => {
+  //   setSelectedFeatureSet(featureSetName);
+  //   setCurrentFeatureSet(availableFeatureSets[featureSetName] || null);
+  // };
+
+  const handleFeatureSetChange = (name) => {
+    setSelectedFeatureSet(name);
+    setCurrentFeatureSet(availableFeatureSets.find(fs => fs.name === name) || null);
   };
 
   const handleAdd = (newFeature) => {
@@ -108,11 +113,20 @@ export const FeatureSetManager = ({ availableFeatureSets, seriesNames, functionL
           onChange={(e) => handleFeatureSetChange(e.target.value)}
           className="min-w-[200px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
         >
+          {availableFeatureSets.map((fs) => (
+            <option key={fs.name} value={fs.name}>{fs.name}</option>
+          ))}
+        </select>
+        {/* <select
+          value={selectedFeatureSet}
+          onChange={(e) => handleFeatureSetChange(e.target.value)}
+          className="min-w-[200px] border border-gray-300 rounded px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-500"
+        >
           <option value="">Select a feature set...</option>
           {Object.keys(availableFeatureSets).map((name) => (
             <option key={name} value={name}>{name}</option>
           ))}
-        </select>
+        </select> */}
       </div>
 
       {/* Features Table */}

@@ -28,12 +28,14 @@ function App() {
   const [seriesNames, setSeriesNames] = useState([]);
   const [featureSet, setFeatureSet] = useState(null);
   const [error, setError] = useState(null);
-  const [availableFeatureSets, setAvailableFeatureSets] = useState({});
-  const [allFeatureSets, setAllFeatureSets] = useState({});
+  const [availableFeatureSets, setAvailableFeatureSets] = useState([]);
+  const [allFeatureSets, setAllFeatureSets] = useState([]);
+  // const [availableFeatureSets, setAvailableFeatureSets] = useState({});
+  // const [allFeatureSets, setAllFeatureSets] = useState({});
   const [functionList, setFunctionList] = useState([])
 
   // const modelNames = ["Baseline", "LSTM", "CNN", "MLP"]
-  const featureSets = ["Limit_Order_Book", "Cut_Down_Limit_Order_Book", "Sandbox_Intraday"]
+  // const featureSets = ["Limit_Order_Book", "Cut_Down_Limit_Order_Book", "Sandbox_Intraday"]
   // const [selectedFeatures, setSelectedFeatures] = useState([]);
   
   const addModel = (newModel) => setModelList((prev) => [...prev, newModel])
@@ -61,7 +63,8 @@ function App() {
 
       // If backend also provides feature sets for this dataset
       if (json.featureSets) {
-        setFeatureSets(json.featureSets);
+        setAllFeatureSets(json.featureSets);
+        // setFeatureSets(json.featureSets);
       }
     } else {
       console.error("Failed to load data:", json.error);
@@ -81,37 +84,27 @@ function App() {
       const names = Object.keys(timeSeriesData[0]).filter(k => k !== "date");
       setSeriesNames(names);
       
-      const filtered = Object.fromEntries(
-        Object.entries(allFeatureSets).filter(([name, fs]) =>
-          fs.features.every(f =>
-            f.input_data_fields.every(field => names.includes(field))
-          )
-        )
-      );
+      const filtered = Object.entries(allFeatureSets || {})
+        .filter(([fsName, fs]) => {
+          if (!fs || !Array.isArray(fs.features)) return false;
+
+          return fs.features.every(feature => {
+            const fields = feature.input_data_fields || feature.inputDataFields || [];
+            return fields.every(f => names.includes(f));
+          });
+        })
+        .map(([name, fs]) => ({ name, ...fs }));
+
       setAvailableFeatureSets(filtered);
+      console.log(filtered);
+    } else {
+      console.warn("No rows found in upload results");
+      setSeriesNames([]);
+      setAvailableFeatureSets([]);
+    }
       
-      // Filter feature sets based on available series
-      // const filteredFeatureSets = Object.entries(featureSetFile)
-      //   .filter(([key, featureSet]) => {
-        //     if (!featureSet.features) return false; // skip empty sets
-        
-        //     // Check that all features exist in CSV columns
-        //     return featureSet.features.every((f) =>
-          //       f.input_data_fields.every((field) => names.includes(field))
-        //     );
-        //   })
-        //   .map(([key, featureSet]) => ({ name: key, ...featureSet }));
-        
-        // setAvailableFeatureSets(filteredFeatureSets);
-        console.log(filtered);
-      } else {
-        console.warn("No rows found in upload results");
-        setSeriesNames([]);
-        setAvailableFeatureSets([]);
-      }
-      
-      setError(null);
-    };
+    setError(null);
+  };
     
     // Handle upload errors
     const handleUploadError = (errorMessage) => {
@@ -133,17 +126,10 @@ function App() {
       console.log('Processing successful:', results.success);
       
       const timeSeriesData = results.timeSeriesData;
-    setProcessedData(timeSeriesData);
+      setProcessedData(timeSeriesData);
 
-    // if (timeSeriesData && timeSeriesData.length > 0) {
-      //   const names = Object.keys(timeSeriesData[0]).filter(k => k !== "date");
-      //   setSeriesNames(names);
-      // } else {
-        //   console.warn("No rows found in upload results");
-        // }
-        
-        setError(null);
-      };
+      setError(null);
+    };
       
       // Handle upload errors
       const handleProcessError = (errorMessage) => {
@@ -224,10 +210,6 @@ function App() {
               }
             />
 
-            {/* Select Model */}
-            {/* <Route path="/load_data" element={<DataUpload />} /> */}
-            {/* <Route path="/select_model" element={<SelectModel />} /> */}
-            {/* <Route path="/display_results" element={<DisplayResults />} /> */}
             <Route
               path="/select_model"
               element={
@@ -291,24 +273,6 @@ function App() {
               )
             }
           />
-
-
-            {/* <Route path="/load_data" element={<DataUpload />} /> */}
-            {/* <Route
-              path="/models/:id/edit"
-              element={
-                dataInfo ? (
-                  <EditModel
-                    modelNames={modelNames}
-                    featureSets={featureSets}
-                    onSave={updateModel}
-                    modelList={modelList}
-                  />
-                ):(
-                  <p className="text-center mt-10">Please upload data first.</p>
-                )
-              }
-            /> */}
 
           </Routes>
         </div >

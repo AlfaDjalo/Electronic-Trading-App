@@ -10,24 +10,11 @@
         "function_parameters": null
       },
       {
-        "name": "Close_lagged_1",
+        "name": "target",
+        "function": "raw_data",
         "input_data_fields": [
           "close"
-        ],
-        "function": "create_lag",
-        "function_parameters": {
-          "num_lags": 1
-        }
-      },
-      {
-        "name": "Close_lagged_2",
-        "input_data_fields": [
-          "close"
-        ],
-        "function": "create_lag",
-        "function_parameters": {
-          "num_lags": 2
-        }
+        ]
       }
     ],
     "data_type": "daily",
@@ -35,11 +22,27 @@
       "input_data_fields": [
         "close"
       ],
-      "function": "create_lag",
-      "function_parameters": {
-        "num_lags": -1
-      }
+      "function": "raw_data"
     }
+  },
+  "Baseline_daily_data": {
+    "features": [
+      {
+        "name": "baseline",
+        "input_data_fields": [
+          "close"
+        ],
+        "function": "raw_data"
+      },
+      {
+        "name": "target",
+        "function": "raw_data",
+        "input_data_fields": [
+          "close"
+        ]
+      }
+    ],
+    "data_type": "daily"
   },
   "Daily_data_historical 2": {
     "features": [
@@ -177,23 +180,11 @@
       },
       {
         "name": "target",
-        "function": "create_lag",
-        "function_parameters": {
-          "num_lags": -1
-        },
+        "function": "raw_data",
         "input_data_fields": ["close"]
       }
     ],
-    "data_type": "daily",
-    "target": {
-      "input_data_fields": [
-        "close"
-      ],
-      "function": "create_lag",
-      "function_parameters": {
-        "num_lags": -1
-      }
-    }
+    "data_type": "daily"
   },
   "Limit_Order_Book": {
     "data_type": "intraday",
@@ -580,15 +571,26 @@
       }
     ]
   },
-  "Test_Set": {
-    "data_type": "daily",
-    "features": [],
-    "target": null
-  },
-  "Test_Set_Intraday": {
+  "Baseline_Intraday": {
     "data_type": "intraday",
-    "features": [],
-    "target": null
+    "features": [
+      {
+        "name": "baseline",
+        "function": "create_average",
+        "input_data_fields": [
+          "bid_price_0",
+          "ask_price_0"
+        ]
+      },
+      {
+        "name": "target",
+        "function": "create_average",
+        "input_data_fields": [
+          "bid_price_0",
+          "ask_price_0"
+        ]
+      }
+    ]
   },
   "Test_Feature_Set 1": {
     "data_type": "test",
@@ -612,5 +614,43 @@
         ]
       }
     ]
+  },
+  "Baseline_test_data": {
+    "features": [
+      {
+        "name": "baseline",
+        "input_data_fields": [
+          "value"
+        ],
+        "function": "raw_data"
+      },
+      {
+        "name": "target",
+        "function": "raw_data",
+        "input_data_fields": [
+          "value"
+        ]
+      }
+    ],
+    "data_type": "daily"
+  },
+  "Test_data": {
+    "features": [
+      {
+        "name": "value",
+        "input_data_fields": [
+          "value"
+        ],
+        "function": "raw_data"
+      },
+      {
+        "name": "target",
+        "function": "raw_data",
+        "input_data_fields": [
+          "value"
+        ]
+      }
+    ],
+    "data_type": "daily"
   }
 }

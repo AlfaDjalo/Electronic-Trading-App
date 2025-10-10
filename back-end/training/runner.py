@@ -1,0 +1,289 @@
+import numpy as np
+import pandas as pd
+
+from models.base import ModelConfig
+from models.factory import ModelFactory
+from training.trainer import ModelTrainer
+from process_data import DataProcessor
+
+class ModelRunner:
+    """
+    Handles running multiple models with shared data processing.
+    This reduced redundant data processing when running multiple models.
+    """
+
+    def __init__(self, raw_data, feature_set_manager, hyperparameters, verbose=False):
+        self.raw_data = raw_data
+        self.feature_set_manager = feature_set_manager
+        self.hyperparameters = hyperparameters
+        self.verbose = verbose
+
+        # Add caching for processed data
+        self._data_cache = {}
+
+        # self.train_ratio, self.val_ratio, self.test_ratio = hyperparameters.get("train_val_test_split", [0.8, 0.1, 0.1])
+        
+        ratios = hyperparameters.get("train_val_test_split", [0.8, 0.1, 0.1])
+        if len(ratios) != 3:
+            raise ValueError("train_val_test_split must have exactly 3 elements (train, val, test)")
+        self.train_ratio, self.val_ratio, self.test_ratio = ratios
+
+    def run_models(self, model_list):
+        """
+        Run all models, grouping by data configuration for efficiency.
+        """
+        
+        # Group models by data processing requirements
+        model_groups = self._group_models_by_data_config(model_list)
+
+        all_results = {
+            "dates": None,
+            "actual": None,
+            "predictions": {},
+            "stats": {}
+        }        
+
+        for config_key, models in model_groups.items():
+            if self.verbose:
+                print(f"Processing group: {config_key} with {len(models)} models")
+
+            # Process data once for this group
+            ml_data = self._process_data_for_config(config_key)
+            processed_data = ml_data.get_data()
+
+            # Train all models in this group
+            for model_config in models:
+                try:
+                    model_results = self._train_single_model(
+                        model_config, ml_data, processed_data
+                    )
+
+                    # Merge results
+                    if all_results["dates"] is None:
+                        all_results["dates"] = model_results["dates"]
+                        all_results["actual"] = model_results["actual"]
+
+                    all_results["predictions"].update(model_results["predictions"])
+                    all_results["stats"].update(model_results["stats"])
+
+                except Exception as e:
+                    model_name = model_config.get("name", "unknown")
+                    print(f"Error with model {model_name}: {e}")
+
+                    all_results["predictions"][model_name] = []
+                    all_results["stats"][model_name] = {"error": str(e)}
+                    if all_results["dates"] is None:
+                        all_results["dates"] = []
+                        all_results["actual"] = []
+
+        return all_results
+
+    def run_single_model(self, model_config):
+        """
+        Run a single model (supports both batch and individual processing).
+        Uses caching to avoid redundant data processing.
+        """
+        model_name = model_config["model"]
+        display_name = model_config.get("name", model_name)
+        
+        if self.verbose:
+            print(f"Running single model: {display_name}")
+        
+        # Get data processing parameters
+        feature_set_name = model_config.get("featureSet")
+        forecast_period = model_config.get("forecastPeriod", 1)
+        input_width = model_config.get("inputWidth", 1)
+        normalise = model_config.get("normalise", False)
+        
+        # Create config key for caching
+        config_key = (feature_set_name, forecast_period, input_width, normalise)
+        
+        # Get processed data (potentially from cache)
+        ml_data = self._get_processed_data_cached(config_key)
+        processed_data = ml_data.get_data()
+        
+        # Train and evaluate model
+        model_results = self._train_single_model(model_config, ml_data, processed_data)
+        
+        return model_results
+    
+    def _get_processed_data_cached(self, config_key):
+        """
+        Get processed data, using cache when possible.
+        """
+        
+        if config_key in self._data_cache:
+            if self.verbose:
+                print(f"Using cached data for {config_key}")
+            return self._data_cache[config_key]
+        
+        # Process data if not cached
+        ml_data = self._process_data_for_config(config_key)
+        
+        # Cache the result
+        self._data_cache[config_key] = ml_data
+        
+        if self.verbose:
+            print(f"Processed and cached data for {config_key}")
+        
+        return ml_data
+
+    def _group_models_by_data_config(self, model_list):
+        """
+        Group models by their data processing requirements.
+        """
+        groups = {}
+
+        for model in model_list:
+            config_key = (
+                model.get("featureSet"),
+                model.get("forecastPeriod", 1),
+                model.get("inputWidth", 1),
+                model.get("normalise", False)
+            )
+
+            if config_key not in groups:
+                groups[config_key] = []
+
+            groups[config_key].append(model)
+
+        return groups
+
+    def _process_data_for_config(self, config_key):
+        """
+        Process data for a specific configuration.
+        """
+        feature_set_name, forecast_period, input_width, normalise = config_key
+
+        feature_set = self.feature_set_manager.get_feature_set(feature_set_name)
+
+        return DataProcessor(
+            raw_data=self.raw_data,
+            feature_set=feature_set,
+            forecast_period=forecast_period,
+            input_width=input_width,
+            normalise=normalise,
+            train_ratio=self.train_ratio,
+            val_ratio=self.val_ratio
+        )
+    
+    def _train_single_model(self, model_config, ml_data, processed_data):
+        """
+        Train a single model with pre-processed data.
+        """
+
+        model_name = model_config["model"]
+        display_name = model_config.get("name", model_name)
+
+        # Create model configuration
+        model_params = model_config.get("params", {})
+        training_params = {k: v for k, v in model_params.items()
+                           if k in ['epochs', 'batch_size', 'optimizer', 'loss', 'learning_rate']}
+        architecture_params = {k: v for k, v in model_params.items()
+                               if k not in ['epochs', 'batch_size', 'optimizer', 'loss', 'learning_rate']}
+        
+        config = ModelConfig(
+            model_params=architecture_params,
+            **training_params
+        )
+
+        # Train model
+        trainer = ModelTrainer(config, verbose=self.verbose)
+
+        x_shape = processed_data['x_train'].shape
+        input_shape = (x_shape[1], x_shape[2]) if len(x_shape) == 3 else (x_shape[1], 1)
+
+        # input_shape = (processed_data['x_train'].shape[1], processed_data['x_train'].shape[2])
+        output_size = processed_data['y_train'].shape[1] if processed_data['y_train'].ndim > 1 else 1
+        # print(processed_data['x_train'].shape, processed_data['x_test'].shape)
+
+        # Train and evaluate
+        trainer.train_model(model_name, processed_data, input_shape, output_size)
+        results = trainer.evaluate_model(processed_data)
+        print("DEBUG results metrics:", results['metrics'])
+
+        # Post-process results
+        y_pred = np.array(results['predictions'])
+        y_true = np.array(results['actuals'])
+
+        # Reverse normalisation if needed
+        if ml_data.get_normalise():
+            target = ml_data.get_target()
+            y_pred = ml_data.inverse_transform(y_pred, target)
+            y_true = ml_data.inverse_transform(y_true, target)
+
+        # print("processed_data)
+        print("y_pred")
+        print(y_pred[:5])
+        print("y_true")
+        print(y_true[:5])
+
+        # if ml_data.get_normalise():
+        #     target = ml_data.get_target()
+        #     params = ml_data.get_normalisation_params(target)
+        #     if params:
+        #         y_pred = (y_pred * params["std"]) + params["mean"]
+        #         y_true = (y_true * params["std"]) + params["mean"]
+
+        # Prepare dates 
+        dates_test = self._get_test_dates(ml_data)
+
+        return {
+            "dates": dates_test,
+            "actual": y_true.tolist(),
+            "predictions": {display_name: y_pred.tolist()},
+            "stats": {display_name: results['metrics']}
+        }
+    
+
+    def _get_test_dates(self, ml_data):
+        """
+        Get test dates for the given data configuration.
+        """
+        if "date" not in self.raw_data:
+            return []
+
+        date_series = pd.to_datetime(self.raw_data["date"], errors="coerce")
+        train_len = int(len(self.raw_data) * self.train_ratio)
+        val_len = int(len(self.raw_data) * self.val_ratio)
+        start_idx = train_len + val_len
+        return pd.to_datetime(date_series.iloc[start_idx:]).dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
+    
+    def get_cache_info(self):
+        """
+        Get information about cached data for debugging.
+        """
+        return {
+            "cached_configurations": len(self._data_cache),
+            "cache_keys": list(self._data_cache.keys())
+        }
+    
+    def clear_cache(self):
+        """
+        Clear the data processing cache.
+        Useful for memory management or when raw data changes.
+        """
+        self._data_cache.clear()
+        if self.verbose:
+            print("Data processing cache cleared")
+
+    def get_cache_memory_usage(self):
+        """
+        Estimate memory usage of cached data (rough estimate).
+        """
+        total_size = 0
+        for config_key, ml_data in self._data_cache.items():
+            try:
+                # Rough estimate - not exact but gives an idea
+                processed_data = ml_data.get_data()
+                for key, data in processed_data.items():
+                    if isinstance(data, np.ndarray):
+                        total_size += data.nbytes
+            except:
+                pass
+
+        return {
+            "estimated_bytes": total_size,
+            "estimated_mb": round(total_size / (1024 * 1024), 2),
+            "cached_configs": len(self._data_cache)
+        }
