@@ -11,10 +11,13 @@ import {
 
 export const ViewChart = ({ chartData, selectedSeries }) => {
 
-    // console.log("chartData sample:", chartData[0]);
-    // console.log("chartData sample:", chartData[1]);
-    // console.log("chartData sample:", chartData[2]);
-    // console.log("selectedSeries:", selectedSeries);
+    console.log("chartData sample:", chartData[0]);
+    console.log("chartData sample:", chartData[1]);
+    console.log("chartData sample:", chartData[2]);
+    console.log("selectedSeries:", selectedSeries);
+    // console.log('Baseline k=1:', results.predictions['baseline-k1']);
+    // console.log('Baseline k=10:', results.predictions['baseline-k10']);
+    // console.log('Dates:', results.dates);
 
     if (!chartData || chartData.length === 0) {
         return <p className="p-4">No chart data available.</p>;

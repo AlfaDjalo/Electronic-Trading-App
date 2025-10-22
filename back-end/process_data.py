@@ -129,6 +129,10 @@ class DataProcessor:
 
         print(self.train_df.head(5))
         
+        # w = WindowGenerator(input_width=6, label_width=1, shift=1, train_df=self.train_df, val_df=self.val_df, test_df=self.test_df)
+        # print("Checking Window Generator.")
+        # print(w)
+
         # Step 4: Windowing (using forecastPeriod)
         self.window = WindowGenerator(
             input_width=self.input_width,
@@ -148,8 +152,7 @@ class DataProcessor:
         print(example_inputs[0, :, 0])
         print(example_labels[0, :, 0])
 
-
-    def get_data(self):
+    def get_data(self, forecast_period: int = None):
         """
         Return processed datasets in a format usable by ModelHandler.
 
@@ -171,6 +174,8 @@ class DataProcessor:
         # self.val_df   = self.val_df.select_dtypes(include=["number"])
         # self.test_df  = self.test_df.select_dtypes(include=["number"])
 
+        fp = forecast_period or self.forecast_period
+
         # Split features and target
         target_col = self.get_target()
         x_train, y_train = self.train_df.drop(columns=[target_col]), self.train_df[target_col]
@@ -180,8 +185,8 @@ class DataProcessor:
         # Rebuild window generator with clean data
         self.window = WindowGenerator(
             input_width=self.input_width,
-            label_width=self.forecast_period,
-            shift=self.forecast_period,
+            label_width=fp,
+            shift=fp,
             train_df=self.train_df,
             val_df=self.val_df,
             test_df=self.test_df,
@@ -272,3 +277,30 @@ class DataProcessor:
         idx = list(self.numeric_cols).index(col)
         mean, std = self.scaler.mean_[idx], self.scaler.scale_[idx]
         return (arr * std) + mean
+
+    def get_label_timestamps(self, split="test", forecast_period=None):
+        """Return list/array of timestamps corresponding to the *final* label in each window for a given forecast_period."""
+        fp = forecast_period or self.forecast_period
+        w = self.input_width
+        s = fp
+        total = w + s
+
+        # choose DataFrame used for the split
+        if split == "train":
+            df = self.train_df
+        elif split == "val":
+            df = self.val_df
+        else:
+            df = self.test_df
+
+        # We need the original index as a list
+        idx = list(df.index)
+
+        # Number of windows that timeseries_dataset_from_array will produce:
+        n_windows = len(df) - total + 1
+        if n_windows <= 0:
+            return []
+
+        # For each window starting at i (0-based), final label index is i + total - 1
+        label_indices = [i + total - 1 for i in range(n_windows)]
+        return [idx[pos] for pos in label_indices]

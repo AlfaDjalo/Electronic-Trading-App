@@ -19,7 +19,7 @@ from services.model_service import process_models_request
 # from flask import render_template, request, redirect, url_for, session, jsonify, send_file, send_from_directory  # Add this import for serving files
 
 # FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\electronic_trading_app\\back-end\\data\\feature_sets.json"
-DEBUG = False
+DEBUG = True
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 # DATA_PATH = os.path.join(BASE_DIR, "data", "feature_sets.json")
 # FEATURE_SETS_FILE = os.path.join(os.path.dirname(__file__), 'data\\feature_sets.json')

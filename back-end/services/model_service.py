@@ -59,12 +59,20 @@ def process_models_request(raw_data_list, model_list, hyperparameters, feature_s
     # Initialize results structure
     results = {
         "success": False,
-        "dates": None,
-        "actual": None,
+        "dates": {},
+        "actual": {},
         "predictions": {},
         "stats": {},
         "errors": {}
     }
+    # results = {
+    #     "success": False,
+    #     "dates": None,
+    #     "actual": None,
+    #     "predictions": {},
+    #     "stats": {},
+    #     "errors": {}
+    # }
     
     # Create ModelRunner
     try:
@@ -100,17 +108,29 @@ def process_models_request(raw_data_list, model_list, hyperparameters, feature_s
             model_results = model_runner.run_single_model(model_config)
             # print("DEBUG result for", model_name, ":", type(model_results), model_results)
 
-            # Set shared fields only once (from first successful model)
-            if results["dates"] is None and model_results.get("dates"):
-                results["dates"] = model_results["dates"]
-            if results["actual"] is None and model_results.get("actual"):
-                results["actual"] = model_results["actual"]
-            
-            # Merge model-specific results
+            # Store per-model dates and actuals
+            if model_results.get("dates"):
+                results["dates"][model_name] = model_results["dates"]
+            if model_results.get("actual"):
+                results["actual"][model_name] = model_results["actual"]
+
+            # Merge predictions and stats as before
             if "predictions" in model_results:
                 results["predictions"].update(model_results["predictions"])
             if "stats" in model_results:
                 results["stats"].update(model_results["stats"])
+
+            # Set shared fields only once (from first successful model)
+            # if results["dates"] is None and model_results.get("dates"):
+            #     results["dates"] = model_results["dates"]
+            # if results["actual"] is None and model_results.get("actual"):
+            #     results["actual"] = model_results["actual"]
+            
+            # # Merge model-specific results
+            # if "predictions" in model_results:
+            #     results["predictions"].update(model_results["predictions"])
+            # if "stats" in model_results:
+            #     results["stats"].update(model_results["stats"])
             
             successful_models += 1
             

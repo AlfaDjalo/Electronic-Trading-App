@@ -154,7 +154,6 @@ class ModelRunner:
         Process data for a specific configuration.
         """
         feature_set_name, forecast_period, input_width, normalise = config_key
-
         feature_set = self.feature_set_manager.get_feature_set(feature_set_name)
 
         return DataProcessor(
@@ -187,6 +186,12 @@ class ModelRunner:
             **training_params
         )
 
+        # Ensure the window matches this model's forecast period (defensive)
+        forecast_period = model_config.get("forecastPeriod", 1)
+        # Re-request processed_data with explicit forecast_period (safe no-op if same)
+        if hasattr(ml_data, "forecast_period") and forecast_period != ml_data.forecast_period:
+            processed_data = ml_data.get_data(forecast_period=forecast_period)
+
         # Train model
         trainer = ModelTrainer(config, verbose=self.verbose)
 
@@ -199,6 +204,11 @@ class ModelRunner:
 
         # Train and evaluate
         trainer.train_model(model_name, processed_data, input_shape, output_size)
+
+        # Show structure
+        if self.verbose:
+            trainer.show_model(return_string=False, include_weights=True, include_values=True)
+
         results = trainer.evaluate_model(processed_data)
         print("DEBUG results metrics:", results['metrics'])
 
@@ -212,11 +222,12 @@ class ModelRunner:
             y_pred = ml_data.inverse_transform(y_pred, target)
             y_true = ml_data.inverse_transform(y_true, target)
 
+
         # print("processed_data)
-        print("y_pred")
-        print(y_pred[:5])
-        print("y_true")
-        print(y_true[:5])
+        # print("y_pred")
+        # print(y_pred[:5])
+        # print("y_true")
+        # print(y_true[:5])
 
         # if ml_data.get_normalise():
         #     target = ml_data.get_target()
@@ -228,6 +239,11 @@ class ModelRunner:
         # Prepare dates 
         dates_test = self._get_test_dates(ml_data)
 
+        print(f"Model: {model_name}, Forecast Period: {forecast_period}")
+        print(f"Predictions shape: {y_pred.shape}")
+        print(f"First 5 predictions: {y_pred[:5]}")
+        print(f"Dates: {dates_test[:5]}")
+        
         return {
             "dates": dates_test,
             "actual": y_true.tolist(),
@@ -240,14 +256,29 @@ class ModelRunner:
         """
         Get test dates for the given data configuration.
         """
-        if "date" not in self.raw_data:
-            return []
+        try:
+            # Use DataProcessor's logic so dates align with WindowGenerator labels
+            dates = ml_data.get_label_timestamps(split="test", forecast_period=getattr(ml_data, "forecast_period", None))
+            # Ensure list of strings (fallback if timestamps are pandas.Timestamps)
+            return [str(d) for d in dates]
+        except Exception:
+            # Fallback: approximate using raw_data split indices (legacy behaviour)
+            if "date" not in self.raw_data:
+                return []
+            date_series = pd.to_datetime(self.raw_data["date"], errors="coerce")
+            train_len = int(len(self.raw_data) * self.train_ratio)
+            val_len = int(len(self.raw_data) * self.val_ratio)
+            start_idx = train_len + val_len
+            return pd.to_datetime(date_series.iloc[start_idx:]).dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
 
-        date_series = pd.to_datetime(self.raw_data["date"], errors="coerce")
-        train_len = int(len(self.raw_data) * self.train_ratio)
-        val_len = int(len(self.raw_data) * self.val_ratio)
-        start_idx = train_len + val_len
-        return pd.to_datetime(date_series.iloc[start_idx:]).dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
+        # if "date" not in self.raw_data:
+        #     return []
+
+        # date_series = pd.to_datetime(self.raw_data["date"], errors="coerce")
+        # train_len = int(len(self.raw_data) * self.train_ratio)
+        # val_len = int(len(self.raw_data) * self.val_ratio)
+        # start_idx = train_len + val_len
+        # return pd.to_datetime(date_series.iloc[start_idx:]).dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
     
     def get_cache_info(self):
         """
@@ -287,3 +318,5 @@ class ModelRunner:
             "estimated_mb": round(total_size / (1024 * 1024), 2),
             "cached_configs": len(self._data_cache)
         }
+    
+    

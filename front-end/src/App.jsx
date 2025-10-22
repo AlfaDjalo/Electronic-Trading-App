@@ -38,7 +38,25 @@ function App() {
   // const featureSets = ["Limit_Order_Book", "Cut_Down_Limit_Order_Book", "Sandbox_Intraday"]
   // const [selectedFeatures, setSelectedFeatures] = useState([]);
   
-  const addModel = (newModel) => setModelList((prev) => [...prev, newModel])
+  const addModel = (newModel) => {
+    // Build base name (without number)
+    const baseName = `${newModel.model}-${newModel.featureSet}`;
+
+    // Count existing models with this base name
+    const count = modelList.filter(m => 
+      m.name && m.name.startsWith(baseName)
+    ).length;
+
+    // Create numbered name
+    const numberedName = `${baseName}_${count + 1}`;
+
+    // Assign the numbered name
+    const modelWithNumberedName = { ...newModel, name: numberedName };
+
+    setModelList((prev) => [...prev, modelWithNumberedName]);
+  };
+
+  // const addModel = (newModel) => setModelList((prev) => [...prev, newModel])
   const deleteModel = (id) => setModelList((prev) => prev.filter((m) => m.id !== id));
   const updateModel = (updated) =>
     setModelList((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));

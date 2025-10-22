@@ -4,7 +4,51 @@ from typing import Dict, Any, Optional, Tuple
 
 from .base import ModelConfig, BaseModel
 
+import tensorflow as tf
+import numpy as np
+from typing import Tuple
+
+from models.base import BaseModel  # assuming your BaseModel provides build(), compile(), etc.
+
 class BaselineModel(BaseModel):
+    """
+    Baseline model: predicts that y_{t+k} = y_t (persistence model).
+    Works with any forecast horizon (shift) defined in the WindowGenerator.
+    """
+    def build_architecture(self, input_shape: Tuple[int, ...], output_size: int) -> tf.keras.Model:
+        # Same as LinearModel: flatten then dense
+        model = tf.keras.Sequential([
+            tf.keras.layers.InputLayer(input_shape=input_shape),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(output_size, name='baseline_output')
+        ])
+
+        # Build once so weights exist
+        model.build((None, *input_shape))
+
+        # Get the Dense layer and overwrite its weights
+        dense_layer = model.get_layer('baseline_output')
+
+        # Create kernel and bias arrays with the right shapes
+        kernel_shape = dense_layer.kernel.shape  # e.g. (input_width * n_features, output_size)
+        bias_shape = dense_layer.bias.shape      # e.g. (output_size,)
+
+        # Initialize kernel as all zeros, but set last feature → 1.0
+        # (since you want to copy the last observed value)
+        kernel = np.zeros(kernel_shape, dtype=np.float32)
+        kernel[-1, :] = 1.0  # the last element in flattened input maps directly to output
+
+        bias = np.zeros(bias_shape, dtype=np.float32)
+
+        dense_layer.set_weights([kernel, bias])
+
+        # Freeze the layer to avoid training
+        dense_layer.trainable = False
+        model.trainable = False
+
+        return model
+
+class BaselineModel_old2(BaseModel):
     """
     Baseline model: predicts the last observed value repeated over the forecast horizon.
     """
@@ -14,22 +58,59 @@ class BaselineModel(BaseModel):
         self.model = None      
 
     def build_architecture(self, input_shape, output_size):
-        """Build model that outputs last timestep repeated."""
+        inputs = tf.keras.layers.Input(shape=input_shape)
+        
+        # Last timestep, last feature: (batch, input_width, features) -> (batch,)
+        last_value = tf.keras.layers.Lambda(
+            lambda x: x[:, -1, -1]
+        )(inputs)
+        
+        # Reshape to (batch, 1) then tile to (batch, output_size)
+        last_value = tf.keras.layers.Reshape((1,))(last_value)
+        
+        if output_size > 1:
+            outputs = tf.keras.layers.Lambda(
+                lambda x: tf.tile(x, [1, output_size])
+            )(last_value)
+        else:
+            outputs = last_value
+        
+        return tf.keras.Model(inputs=inputs, outputs=outputs)
+    
+    def build_architecture_old(self, input_shape, output_size):
         self.input_shape = input_shape
         self.output_size = output_size
 
         inputs = tf.keras.layers.Input(shape=input_shape)
+        # Take the last timestep from the input (shape: batch, n_features)
+        last_step = tf.keras.layers.Lambda(lambda x: x[:, -1, :], name="last_step")(inputs)
+        # Optionally select the first feature if you have multiple inputs
+        if input_shape[-1] > 1:
+            last_value = tf.keras.layers.Lambda(lambda x: x[:, 0:1], name="select_first_feature")(last_step)
+        else:
+            last_value = last_step
+
+        outputs = last_value  # no Dense layer, no learning
+        return tf.keras.Model(inputs, outputs, name="BaselineModel")
+
+
+    # def build_architecture(self, input_shape, output_size):
+    #     """Build model that outputs last timestep repeated."""
+        # self.input_shape = input_shape
+        # self.output_size = output_size
+
+        # inputs = tf.keras.layers.Input(shape=input_shape)
         
-        # Take last timestep, extract single feature (target column is last)
-        last_value = tf.keras.layers.Lambda(lambda x: x[:, -1, -1:])(inputs)
+        # # Take last timestep, extract single feature (target column is last)
+        # last_value = tf.keras.layers.Lambda(lambda x: x[:, -1, -1:])(inputs)
         
-        # Repeat for forecast_period steps
-        # Shape: (batch, 1) -> (batch, output_size)
-        outputs = tf.keras.layers.Lambda(
-            lambda x: tf.tile(x, [1, output_size])
-        )(last_value)
+        # # Repeat for forecast_period steps
+        # # Shape: (batch, 1) -> (batch, output_size)
+        # outputs = tf.keras.layers.Lambda(
+        #     lambda x: tf.tile(x, [1, output_size])
+        # )(last_value)
         
-        return tf.keras.Model(inputs=inputs, outputs=outputs)
+        # return tf.keras.Model(inputs=inputs, outputs=outputs)
 
     def fit(self, x_train=None, y_train=None, x_val=None, y_val=None, *args, **kwargs):
         """
@@ -42,7 +123,15 @@ class BaselineModel(BaseModel):
             self.build_architecture(input_shape, output_size)
         return self
 
-    def predict(self, X, *args, **kwargs):
+    def predict(self, X, verbose=0):
+        """
+        Return 2D predictions (batch, n_targets). Use the underlying keras model
+        for consistency with other models.
+        """
+        return self.model(X, training=False).numpy()
+
+
+    def predict_also_old_not_giving_correct_output(self, X, *args, **kwargs):
         print("X.shape")
         print(X.shape)
 

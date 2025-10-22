@@ -4,13 +4,13 @@
     "linear": {
         "learning_rate": {
             "type": "float",
-            "default": 0.01,
+            "default": 0.05,
             "min": 0.001,
             "max": 0.1
         },
         "epochs": {
             "type": "integer",
-            "default": 1000,
+            "default": 200,
             "min": 10,
             "max": 10000
         },
