@@ -60,7 +60,7 @@ def process_models_request(raw_data_list, model_list, hyperparameters, feature_s
     results = {
         "success": False,
         "dates": {},
-        "actual": {},
+        "actual": None,
         "predictions": {},
         "stats": {},
         "errors": {}
@@ -86,7 +86,8 @@ def process_models_request(raw_data_list, model_list, hyperparameters, feature_s
         raise ValueError(f"Failed to initialize ModelRunner: {str(e)}")
     
     successful_models = 0
-    
+    actual_map = {}
+
     # Process each model
     for model_config in model_list:
         model_name = model_config.get("name", "unknown")
@@ -108,11 +109,19 @@ def process_models_request(raw_data_list, model_list, hyperparameters, feature_s
             model_results = model_runner.run_single_model(model_config)
             # print("DEBUG result for", model_name, ":", type(model_results), model_results)
 
-            # Store per-model dates and actuals
-            if model_results.get("dates"):
+            if model_results.get("dates") and model_results.get("actual"):
                 results["dates"][model_name] = model_results["dates"]
-            if model_results.get("actual"):
-                results["actual"][model_name] = model_results["actual"]
+                
+                # Add actuals to the map
+                for date, actual_val in zip(model_results["dates"], model_results["actual"]):
+                    if date not in actual_map:
+                        actual_map[date] = actual_val
+
+            # Store per-model dates and actuals
+            # if model_results.get("dates"):
+            #     results["dates"][model_name] = model_results["dates"]
+            # if model_results.get("actual"):
+            #     results["actual"][model_name] = model_results["actual"]
 
             # Merge predictions and stats as before
             if "predictions" in model_results:
@@ -143,6 +152,8 @@ def process_models_request(raw_data_list, model_list, hyperparameters, feature_s
             results["predictions"][model_name] = []
             results["stats"][model_name] = {"error": error_msg}
             results["errors"][model_name] = error_msg
+    
+    results["actual"] = actual_map
     
     # Determine overall success
     results["success"] = successful_models > 0
