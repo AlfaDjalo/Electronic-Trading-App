@@ -273,9 +273,9 @@ function App() {
           <Route
             path="/view_results"
             element={
-              results ? (
+              results && rawData ? (
                 <div className="pt-20">
-                  <ViewResults results={results} />
+                  <ViewResults results={results} rawData={rawData} />
                 </div>
               ) : modelList.length > 0 && rawData ? (
                 // lazy-run models if possible
