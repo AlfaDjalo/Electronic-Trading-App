@@ -138,5 +138,15 @@
                 "adam"
             ]
         } 
+    },
+    "lob_cnn": {
+        "levels": { "type": "integer", "default": 5, "min": 1, "max": 20 },
+        "features_per_level": { "type": "integer", "default": 2 },
+        "conv_filters": { "type": "integer", "default": 8 },
+        "kernel_size": { "type": "integer", "default": 1 },
+        "dense_units": { "type": "integer", "default": 64 },
+        "learning_rate": { "type": "float", "default": 0.001 },
+        "epochs": { "type": "integer", "default": 50 },
+        "batch_size": { "type": "integer", "default": 64 }   
     }
 }

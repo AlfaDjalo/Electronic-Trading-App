@@ -288,3 +288,116 @@ class LSTMModel(BaseModel):
         ])
 
         return tf.keras.Sequential(layers)
+
+class GatherLayer(tf.keras.layers.Layer):
+    def __init__(self, indices, **kwargs):
+        super().__init__(**kwargs)
+        self.indices = indices
+
+    def call(self, inputs):
+        return tf.gather(inputs, self.indices, axis=1)
+    
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], len(self.indices))
+
+class LOBCNNModel(BaseModel):
+    """
+    Expects windowed input shape: (batch, input_width, n_features.)
+    It takes the last timestep, reshapes features into (levels*2, features_per_level)
+    or into (levels, features_per_level) per side, applies Conv1D across levels,
+    flattens and outputs a dense regression head.
+    ModelConfig.model_params supports:
+    - levels (int): number of price levels per side (default 5)
+    - features_per_level (int): usually 2 (price, volume) (default 2)
+    - conv_filters (int): Conv1D filters (default 8)
+    - kernel_size (int): Conv1D kernel size (default 1)
+    - dense_units (int): Dense hidden units after conv (default 64)    
+    """
+    def build_architecture(self, input_shape: Tuple[int, ...], output_size: int) -> tf.keras.Model:
+        params = getattr(self.config, "model_params", {}) or {}
+        levels = int(params.get("levels", 5))
+        features_per_level = int(params.get("features_per_level", 2))
+        conv_filters = int(params.get("conv_filters", 8))
+        kernel_size = int(params.get("kernel_size", 1))
+        dense_units = int(params.get("dense_units", 64))
+
+        # input_shape: (input_width, n_features)
+        inputs = tf.keras.layers.Input(shape=input_shape, name="lob_input")
+        
+        # take the last timestep only (shape -> (batch, n_features))
+        last_step = tf.keras.layers.Lambda(lambda x: x[:, -1, :], name="last_timestep")(inputs)
+
+        # Build indices assuming ordering:
+        # [bid_price_0..bid_price_{L-1},
+        # bid_volume_0..bid_volume_{L-1},
+        # ask_price_0..ask_price_{L-1},
+        # ask_volume_0..ask_volume_{L-1}]
+        n_features = input_shape[-1]
+        expected = levels * features_per_level * 2 # bid+ask
+        if n_features < expected:
+            # fallback: try to reshape by flattening into (levels*2, features_per_level)
+            reshaped = tf.keras.layers.Reshape((levels * 2, -1), name="lob_reshape_fallback")(last_step)
+        else:
+            # Gather slices for each side and interleave price/volume per level 
+            # indices for price/volume blocks
+            # price_bid: 0..levels-1
+            # volume_bid: levels..2*levels-1
+            # price_ask: 2*levels..3*levels-1
+            # volume_ask: 3*levels..4*levels-1
+
+            price_bid = GatherLayer(indices=range(0, levels), name="gather_price_bid")(last_step)
+            vol_bid = GatherLayer(indices=range(levels, 2*levels), name="gather_vol_bid")(last_step)
+            price_ask = GatherLayer(indices=range(2*levels, 3*levels), name="gather_price_ask")(last_step)
+            vol_ask = GatherLayer(indices=range(3*levels, 4*levels), name="gather_vol_ask")(last_step)
+
+            # Stack bid features
+            bid = tf.keras.layers.Lambda(
+                lambda inputs: tf.stack(inputs, axis=-1),
+                name="stack_bid"
+            )([price_bid, vol_bid])
+
+            ask = tf.keras.layers.Lambda(
+                lambda inputs: tf.stack(inputs, axis=-1),
+                name="stack_ask"
+            )([price_ask, vol_ask])
+
+            x = tf.keras.layers.Concatenate(axis=1, name="lob_bid_ask_concat")([bid, ask])
+            # price_bid_idx = tf.constant(list(range(0, levels)), dtype=tf.int32)
+            # vol_bid_idx = tf.constant(list(range(levels, 2*levels)), dtype=tf.int32)
+            # price_ask_idx = tf.constant(list(range(2*levels, 3*levels)), dtype=tf.int32)
+            # vol_ask_idx = tf.constant(list(range(3*levels, 4*levels)), dtype=tf.int32)
+
+            # # gather tensors shape -> (batch, levels)
+            # pb = tf.gather(last_step, price_bid_idx, axis=1)
+            # vb = tf.gather(last_step, vol_bid_idx, axis=1)
+            # pa = tf.gather(last_step, price_ask_idx, axis=1)
+            # va = tf.gather(last_step, vol_ask_idx, axis=1)
+
+            # build bid (batch, levels, features_per_level) where features_per_level==2 (price, volume)
+            # bid = tf.stack([pb, vb], axis=-1) # (batch, levels, 2)
+            # ask = tf.stack([pa, va], axis=-1) # (batch, levels, 2)
+
+            # concatenate bid + ask along levels dimension -> (batch, levels*2, 2)
+            # reshaped = tf.concat([bid, ask], axis=1, name="lob_bid_ask_concat")
+
+        # Now we have (batch, levels*2, features_per_level)
+        # x = reshaped
+
+        # Conv1D expected shape (batch, steps, channels) -> use channels=features_per_level
+        x = tf.keras.layers.Conv1D(filters=conv_filters, kernel_size=kernel_size, activation="relu", name="lob_conv1")(x)
+        x = tf.keras.layers.Flatten(name="lob_flatten")(x)
+        x = tf.keras.layers.Dense(dense_units, activation="relu", name="lob_dense")(x)
+        outputs = tf.keras.layers.Dense(output_size, activation="linear", name="lob_output")(x)
+
+        model = tf.keras.Model(inputs=inputs, outputs=outputs, name="LOBCNNModel")
+        return model
+    
+        #     verbose_name = _(")
+        #     verbose_name_plural = _(s")
+    
+        # def __str__(self):
+        #     return self.name
+    
+        # def get_absolute_url(self):
+        #     return reverse(_detail", kwargs={"pk": self.pk})
+    

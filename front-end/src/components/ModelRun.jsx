@@ -9,8 +9,6 @@ export const ModelRun = async (models, rawData) => {
       return;
     }
 
-    // console.log(rawData)
-
     // Prepare payload
     const payload = {
       rawData: rawData,  // rename "data" → "rawData"
@@ -20,11 +18,6 @@ export const ModelRun = async (models, rawData) => {
         train_val_test_split: [0.8, 0.1, 0.1]
       }
     };
-
-    // const payload = {
-    //   models,       // list of model configurations
-    //   data: dataInfo // the uploaded time series data
-    // };
 
     const response = await fetch("http://localhost:5000/api/run_models", {
       method: "POST",

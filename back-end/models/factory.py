@@ -3,7 +3,7 @@ from typing import Dict, Any, Optional, Tuple
 # from dataclasses import dataclass
 
 from .base import ModelConfig, BaseModel
-from .implementations import BaselineModel, LinearModel, MLPModel, LSTMModel
+from .implementations import BaselineModel, LinearModel, MLPModel, LSTMModel, LOBCNNModel
 
 class ModelFactory:
     """
@@ -15,6 +15,7 @@ class ModelFactory:
         "linear": LinearModel,
         "mlp": MLPModel,
         "lstm": LSTMModel,
+        "lob_cnn": LOBCNNModel,
         # "cnn": KerasCNN,
     }
 

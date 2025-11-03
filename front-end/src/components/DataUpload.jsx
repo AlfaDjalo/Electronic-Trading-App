@@ -4,16 +4,21 @@ import './DataUpload.css';
 
 export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName }) => {
   const [mode, setMode] = useState("csv");
+  
+  // CSV data
+  const [selectedFileName, setSelectedFileName] = useState(uploadedFileName || null);
+  
+  // Yahoo Finance data
   const [category, setCategory] = useState("");
   const [tickers, setTickers] = useState([]);
   const [ticker, setTicker] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const [selectedFileName, setSelectedFileName] = useState(uploadedFileName || null);
   const [uploadStatus, setUploadStatus] = useState(uploadedFileName ? "success" : "idle");
   const [errorMessage, setErrorMessage] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -27,7 +32,6 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
   }, [uploadedFileName]);
   
   useEffect(() => {
-    console.log(category)
     if (category) {
       fetch(`http://localhost:5000/api/get_tickers/${category}`)
         .then((res) => res.json())
@@ -407,28 +411,6 @@ export const DataUpload = ({ onUploadSuccess, onUploadError, uploadedFileName })
           {errorMessage}
         </div>
       )}
-
-      {/* SUCCESS MESSAGE */}
-      {/* {uploadStatus === 'success' && (
-        <div className="success-message">
-          <span className="success-icon">✅</span>
-          File uploaded and processed successfully!
-        </div>
-      )} */}
-
-      {/* ACTION BUTTONS */}
-      {/* <div className="button-container"> */}
-        {/* Remove Upload button */}
-        {/* Only show "Choose Different File" if a file is selected and not uploading */}
-        {/* {selectedFileName && uploadStatus !== 'uploading' && (
-          <button 
-          className="clear-button-secondary"
-          onClick={handleClear}
-          >
-            Choose Different File
-          </button>
-        )}
-      </div> */}
     </div>
   );
 };
