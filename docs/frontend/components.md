@@ -1,6 +1,6 @@
 # React Components
 
-## `LoadData.jsx`
+## `DataUpload.jsx`
 - **Purpose**: This component allows the user to load data into the application, either by uploading a local CSV file or by fetching data directly from Yahoo Finance.
 It manages drag-and-drop uploads, validates file type and size, shows progress indicators, and handles errors.
 It also provides the option to select financial data categories and tickers for fetching remote data.
@@ -557,6 +557,213 @@ Uses actual dates from testDates if available; otherwise falls back to numeric i
   3. The user chooses which series to visualize using SeriesSelector.
   4. The selectedSeries array updates in React state.
   5. The ViewChart component re-renders with the updated selection to display the corresponding lines.
+
+
+## `FeatureSetManager.jsx`
+- **Purpose**: This component provides a complete interface for viewing, editing, adding, and saving feature sets used in model training.
+    A feature set defines the collection of input features derived from raw data (e.g., moving averages, ratios, or lag values).
+    FeatureSetManager enables users to:
+    - Select an existing feature set.
+    - Edit, add, or delete individual features.
+    - View feature parameters and data types.
+    - Persist changes to the backend API.
+
+- **Props**:
+  - `availableFeatureSets`: (array of objects) — list of available feature sets retrieved from the backend.
+    Each object typically has the structure:
+    {
+      "name": "default_features",
+      "data_type": "daily",
+      "features": [
+        { "id": 1, "name": "SMA_10", "function": "moving_average", "function_parameters": {"window": 10}, ... }
+      ]
+    }
+  - `seriesNames`: (array of strings) — available input series names (columns) that can be used in feature creation.
+  - `functionList`: (array of strings or objects) — list of available feature-generation functions (e.g., "lag", "moving_average", "ratio") that the user can choose from in the FeatureForm.
+
+- **State**:
+  - `selectedFeatureSet` (string) — name of the currently selected feature set.
+  - `currentFeatureSet` (object) — currently active feature set being viewed or edited.
+  - `editingFeature` (object or null) — feature currently being edited in the FeatureForm (or null if none).
+
+- **Refs**:
+  None (state and updates are handled via React hooks).
+
+- **Main Functions**:
+  - `handleFeatureSetChange(name)` — updates the selected feature set and loads its details into currentFeatureSet.
+  - `handleAdd(newFeature)` — adds a new feature to the current feature set if it doesn’t already exist. Prevents duplicate names.
+  - `handleUpdate(updatedFeature)` — updates an existing feature in the set, ensuring name uniqueness.
+  - `handleDelete(id)` — removes a feature from the current feature set by its unique ID.
+  - `handleSave()` — sends a POST request to /api/save_feature_set with the updated feature set.
+    Displays success or error alerts based on the API response.
+
+- **UI Structure**:
+  - Feature Set Selector (Dropdown): Allows the user to select which feature set to edit from the list of available sets.
+  - Feature Details Section: Displays metadata for the current set (e.g., frequency / data_type).
+  - Features Table: Shows all features in the current set in a structured table.
+    Columns include:
+      - Name — feature name.
+      - Input Fields — source columns used for computation.
+      - Function — transformation applied (e.g. lag, SMA).
+      - Parameters — function parameters in JSON form.
+      - Actions — edit or delete buttons (delete disabled for target features).
+    Features are displayed in order: all non-target features first, followed by the target.
+  - Save Button: Commits changes back to the backend API.
+  - Feature Form (below table):
+    - Uses FeatureForm to add or update a feature.
+    - Automatically switches between Add and Edit mode depending on whether editingFeature is set.
+
+- **Backend API Dependencies**:
+  - POST /api/save_feature_set
+    - Saves or updates a feature set.
+    - Expects payload:
+      {
+        "name": "set_name",
+        "feature_set": { "data_type": "daily", "features": [...] }
+      }
+    - Example response:
+      { "message": "Feature set saved successfully." }
+    - Returns error messages if validation fails or if the save operation fails.
+
+- **Libraries and Hooks**:
+  - `React`: useState, useEffect
+  - Local components:
+    - FeatureForm — handles input and validation for creating or editing individual features.
+
+- **Data Flow**:
+  1. When FeatureSetManager mounts, it loads the first available feature set into state.
+  2. User can switch between sets using the dropdown.
+  3. User actions (add/update/delete) modify the currentFeatureSet in memory.
+  4. The Save button triggers a backend update through /api/save_feature_set.
+  5. Any added or updated feature definitions are reflected immediately in the table.
+  6. The FeatureForm allows users to configure new features using available series and functions.
+
+
+
+## `FeatureForm.jsx`
+
+- **Purpose**: This component provides a form interface for creating or editing individual features within a feature set.
+    Users can define the feature’s name, select input data fields, choose a transformation function, and specify parameters in JSON format.
+    It validates uniqueness, enforces correct JSON syntax, and automatically generates feature names when appropriate.
+
+- **Props**:
+  - `seriesNames` (array) — List of available input data fields from the dataset.
+  - `functionList` (array) — List of available transformation or feature generation functions.
+  - `initialValues` (object, optional) — Pre-filled values used when editing an existing feature.
+  - `existingNames` (array) — Used to prevent duplicate feature names within the same feature set.
+  - `onSubmit` (function) — Callback triggered on successful form submission. Receives a constructed feature object.
+
+- **State**:
+  - `name` (string) — The user-specified or auto-generated name for the feature.
+  - `inputFields` (array of string) — Selected input fields from the dataset.
+  - `func` (string) — The selected transformation or computation function.
+  - `params` (string) — JSON string representing function parameters.
+  - `error` (string) — Holds validation or parsing errors for display to the user.
+
+- **Effects**:
+  - On mount and whenever initialValues changes, the form reinitializes its state.
+  - Auto-generates a feature name when the user selects an input field or function but hasn’t manually entered a name.
+  - Ensures automatically generated names are unique by appending numeric suffixes if conflicts exist.
+
+- **Main Functions**:
+  - `makeUniqueName(base)` — Generates a unique name by checking existing feature names and adding numeric suffixes if needed.
+  - `handleSubmit(event)` — Validates inputs, parses JSON parameters, constructs a feature object, and calls onSubmit.
+  - `setInputFields()` / `setFunc()` / `setParams()` — State setters for field selections and parameter entry.
+  - Inline JSON validation and name uniqueness checks before submission.
+
+- **Validation Rules**:
+  - The feature name must not duplicate any name in existingNames unless editing that same feature.
+  - Function parameters must be valid JSON.
+  - The “target” feature name is protected and cannot be edited.
+
+- **UI Structure**:
+  - Two-column responsive grid layout:
+    - Top left: Feature name input (with red border if invalid).
+    - Top right: Function dropdown selector.
+    - Bottom left: Multi-select dropdown for input data fields.
+    - Bottom right: Textarea for function parameters in JSON.
+  - Displays validation error messages in red below the form fields.
+  - Submit button spans both columns and updates its label dynamically:
+    - “Add Feature” for new features.
+    - “Update Feature” when editing.
+
+- **Behavior on Submit**:
+  - If validation succeeds:
+    - Constructs a feature object:
+      {
+        id: <unique or existing>,
+        name: <string>,
+        input_data_fields: <array>,
+        function: <string>,
+        function_parameters: <object>
+      }
+    - Calls onSubmit(featureObject).
+  - If creating a new feature, resets form fields after submission.
+
+- **Libraries and Hooks**:
+  - `React`: useState, useEffect
+  - `Tailwind CSS` for layout and styling
+  - Native form and input elements for text, select, and textarea controls
+
+- **Integration Notes**:
+  - Used inside FeatureSetManager.jsx for adding or editing features.
+  - Parent component (FeatureSetManager) manages persistence and saving to the backend.
+  - Validation logic ensures consistent feature definitions befor
+
+
+
+## `ViewChart.jsx`
+
+- **Purpose**:
+  This component renders time series data as an interactive line chart using Recharts.
+  It supports multiple data series, automatically scales axes, and adapts tick formatting for both daily and intraday data.
+  It is primarily used to visualize model predictions and baseline comparisons over time.
+
+- **Props**:
+  - `chartData`: (array of objects, required) — The dataset to plot.
+    Each object represents a single time point with fields such as { date, actual, model1, model2, ... }.
+  - `selectedSeries`: (array of strings, required) — Names of the data series to plot from within chartData (e.g., ["actual", "baseline-k1", "model"]).
+
+- **State**:
+  (None — this is a stateless functional component.)
+
+- **Refs**:
+  (None — this component does not use refs.)
+
+- **Main Functions**:
+  - `isIntraday(chartData)` — Determines whether the dataset represents intraday (sub-daily) data by comparing the time difference between the first two entries.
+    Returns true if the spacing is less than 24 hours, false otherwise.
+  - Inline `tickFormatter(tick)` — Converts the X-axis date or timestamp into a readable label:
+    - For intraday data: shows HH:MM:SS.
+    - For daily data: shows YYYY-M-D.
+
+- **UI Structure**:
+  - <ResponsiveContainer> ensures full width and height responsiveness.
+  - <LineChart> defines the main chart with margins and data bindings.
+  - <CartesianGrid> draws background grid lines.
+  - <XAxis> displays time or date labels, auto-adjusted for intraday or daily data.
+  - <YAxis> auto-scales vertically based on the data range.
+  - <Tooltip> provides hover-based data inspection.
+  - <Legend> lists the visible series and their colors.
+  - <Line> elements are dynamically generated for each entry in selectedSeries, each with a distinct color determined by the index.
+
+- **Backend API Dependencies**:
+  (None — this component receives all data through props from its parent.)
+
+- **Libraries and Hooks**:
+  - `Recharts`: LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer
+  - `React`: Basic JSX rendering (no hooks used).
+
+- **Data Flow**:
+  - Parent component (e.g., ViewResults.jsx) passes in processed chartData and the list of series to display.
+  - ViewChart renders the lines for each series.
+  - The X-axis displays the formatted date or time, depending on data frequency.
+  - The component does not fetch or mutate data — it is purely presentational.
+
+- **Notes**:
+  - When chartData is empty or undefined, the component displays a fallback message ("No chart data available.").
+  - Each line color is automatically generated using an HSL hue offset for visual distinction.
+  - Dates are expected to be valid ISO strings or timestamps; ensure proper conversion before passing them in.
 
 
 

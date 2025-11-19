@@ -295,17 +295,16 @@ class GatherLayer(tf.keras.layers.Layer):
         self.indices = indices
 
     def call(self, inputs):
-        return tf.gather(inputs, self.indices, axis=1)
+        return tf.gather(inputs, self.indices, axis=-1)
     
     def compute_output_shape(self, input_shape):
-        return (input_shape[0], len(self.indices))
+        return (*input_shape[:-1], len(self.indices))
 
 class LOBCNNModel(BaseModel):
     """
     Expects windowed input shape: (batch, input_width, n_features.)
-    It takes the last timestep, reshapes features into (levels*2, features_per_level)
-    or into (levels, features_per_level) per side, applies Conv1D across levels,
-    flattens and outputs a dense regression head.
+    Reshapes features at each timestep into (levels*2, features_per_level),
+    applies Conv1D across levels, then Conv1D across time, flattens and outputs.
     ModelConfig.model_params supports:
     - levels (int): number of price levels per side (default 5)
     - features_per_level (int): usually 2 (price, volume) (default 2)
@@ -315,7 +314,6 @@ class LOBCNNModel(BaseModel):
     """
     def build_architecture(self, input_shape: Tuple[int, ...], output_size: int) -> tf.keras.Model:
         params = getattr(self.config, "model_params", {}) or {}
-        levels = int(params.get("levels", 5))
         features_per_level = int(params.get("features_per_level", 2))
         conv_filters = int(params.get("conv_filters", 8))
         kernel_size = int(params.get("kernel_size", 1))
@@ -323,67 +321,67 @@ class LOBCNNModel(BaseModel):
 
         # input_shape: (input_width, n_features)
         inputs = tf.keras.layers.Input(shape=input_shape, name="lob_input")
-        
-        # take the last timestep only (shape -> (batch, n_features))
-        last_step = tf.keras.layers.Lambda(lambda x: x[:, -1, :], name="last_timestep")(inputs)
 
-        # Build indices assuming ordering:
-        # [bid_price_0..bid_price_{L-1},
-        # bid_volume_0..bid_volume_{L-1},
-        # ask_price_0..ask_price_{L-1},
-        # ask_volume_0..ask_volume_{L-1}]
+        input_width = input_shape[0]
         n_features = input_shape[-1]
-        expected = levels * features_per_level * 2 # bid+ask
-        if n_features < expected:
-            # fallback: try to reshape by flattening into (levels*2, features_per_level)
-            reshaped = tf.keras.layers.Reshape((levels * 2, -1), name="lob_reshape_fallback")(last_step)
+        block = features_per_level * 2
+
+        # If feature count not divisible by expected block size, attempt a safe trim.
+        if n_features % block != 0:
+            remainder = n_features % block
+            # If remainder is small (e.g. 1) we assume an extra trailing column (target)
+            # and drop the last `remainder` channels. If remainder is large, it's likely
+            # the feature layout is wrong and we raise an error below.
+            if remainder <= 3:
+                # Trim the last `remainder` columns across the feature axis
+                tf.print(f"LOBCNNModel: trimming last {remainder} feature column(s) to match expected LOB layout.")
+                x = tf.keras.layers.Lambda(lambda t: t[..., :-remainder], name="lob_trim_extra_features")(inputs)
+                n_features = n_features - remainder
+            else:
+                raise ValueError(
+                    f"Number of features ({input_shape[-1]}) is not compatible with features_per_level*2 ({block}). "
+                    f"Remaining columns after dividing by block: {remainder}. Expected format: "
+                    f"[bid_price_0..N, bid_vol_0..N, ask_price_0..N, ask_vol_0..N]"
+                )
         else:
-            # Gather slices for each side and interleave price/volume per level 
-            # indices for price/volume blocks
-            # price_bid: 0..levels-1
-            # volume_bid: levels..2*levels-1
-            # price_ask: 2*levels..3*levels-1
-            # volume_ask: 3*levels..4*levels-1
+            x = inputs
 
-            price_bid = GatherLayer(indices=range(0, levels), name="gather_price_bid")(last_step)
-            vol_bid = GatherLayer(indices=range(levels, 2*levels), name="gather_vol_bid")(last_step)
-            price_ask = GatherLayer(indices=range(2*levels, 3*levels), name="gather_price_ask")(last_step)
-            vol_ask = GatherLayer(indices=range(3*levels, 4*levels), name="gather_vol_ask")(last_step)
+        # Recompute levels after possible trimming
+        if n_features % block != 0:
+            # defensive check
+            raise ValueError(
+                f"After trimming, number of features ({n_features}) must be divisible by features_per_level*2 ({block})."
+            )
 
-            # Stack bid features
-            bid = tf.keras.layers.Lambda(
-                lambda inputs: tf.stack(inputs, axis=-1),
-                name="stack_bid"
-            )([price_bid, vol_bid])
+        levels = n_features // (features_per_level * 2)
+        expected = levels * features_per_level * 2  # bid+ask
 
-            ask = tf.keras.layers.Lambda(
-                lambda inputs: tf.stack(inputs, axis=-1),
-                name="stack_ask"
-            )([price_ask, vol_ask])
+        if levels <= 0:
+            raise ValueError(f"Insufficient features ({n_features}) to build LOB model with features_per_level={features_per_level}.")
 
-            x = tf.keras.layers.Concatenate(axis=1, name="lob_bid_ask_concat")([bid, ask])
-            # price_bid_idx = tf.constant(list(range(0, levels)), dtype=tf.int32)
-            # vol_bid_idx = tf.constant(list(range(levels, 2*levels)), dtype=tf.int32)
-            # price_ask_idx = tf.constant(list(range(2*levels, 3*levels)), dtype=tf.int32)
-            # vol_ask_idx = tf.constant(list(range(3*levels, 4*levels)), dtype=tf.int32)
+        # Build LOB feature grouping assuming ordering:
+        # [bid_price_0..levels-1, bid_vol_0..levels-1, ask_price_0..levels-1, ask_vol_0..levels-1]
+        price_bid = GatherLayer(indices=range(0, levels), name="gather_price_bid")(x)
+        vol_bid = GatherLayer(indices=range(levels, 2*levels), name="gather_vol_bid")(x)
+        price_ask = GatherLayer(indices=range(2*levels, 3*levels), name="gather_price_ask")(x)
+        vol_ask = GatherLayer(indices=range(3*levels, 4*levels), name="gather_vol_ask")(x)
 
-            # # gather tensors shape -> (batch, levels)
-            # pb = tf.gather(last_step, price_bid_idx, axis=1)
-            # vb = tf.gather(last_step, vol_bid_idx, axis=1)
-            # pa = tf.gather(last_step, price_ask_idx, axis=1)
-            # va = tf.gather(last_step, vol_ask_idx, axis=1)
+        # Stack bid features
+        bid = tf.keras.layers.Lambda(
+            lambda inputs: tf.stack(inputs, axis=-1),
+            name="stack_bid"
+        )([price_bid, vol_bid])
 
-            # build bid (batch, levels, features_per_level) where features_per_level==2 (price, volume)
-            # bid = tf.stack([pb, vb], axis=-1) # (batch, levels, 2)
-            # ask = tf.stack([pa, va], axis=-1) # (batch, levels, 2)
+        ask = tf.keras.layers.Lambda(
+            lambda inputs: tf.stack(inputs, axis=-1),
+            name="stack_ask"
+        )([price_ask, vol_ask])
 
-            # concatenate bid + ask along levels dimension -> (batch, levels*2, 2)
-            # reshaped = tf.concat([bid, ask], axis=1, name="lob_bid_ask_concat")
+        x = tf.keras.layers.Concatenate(axis=2, name="lob_bid_ask_concat")([bid, ask])
 
-        # Now we have (batch, levels*2, features_per_level)
-        # x = reshaped
+        x = tf.keras.layers.Reshape((input_width * levels * 2, features_per_level), name="merge_time_levels")(x)
 
-        # Conv1D expected shape (batch, steps, channels) -> use channels=features_per_level
+        # Conv1D expected shape (batch, steps, channels)
         x = tf.keras.layers.Conv1D(filters=conv_filters, kernel_size=kernel_size, activation="relu", name="lob_conv1")(x)
         x = tf.keras.layers.Flatten(name="lob_flatten")(x)
         x = tf.keras.layers.Dense(dense_units, activation="relu", name="lob_dense")(x)
@@ -391,13 +389,4 @@ class LOBCNNModel(BaseModel):
 
         model = tf.keras.Model(inputs=inputs, outputs=outputs, name="LOBCNNModel")
         return model
-    
-        #     verbose_name = _(")
-        #     verbose_name_plural = _(s")
-    
-        # def __str__(self):
-        #     return self.name
-    
-        # def get_absolute_url(self):
-        #     return reverse(_detail", kwargs={"pk": self.pk})
-    
+

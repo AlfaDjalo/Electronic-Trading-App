@@ -180,7 +180,7 @@ class ModelRunner:
                            if k in ['epochs', 'batch_size', 'optimizer', 'loss', 'learning_rate']}
         architecture_params = {k: v for k, v in model_params.items()
                                if k not in ['epochs', 'batch_size', 'optimizer', 'loss', 'learning_rate']}
-        
+
         config = ModelConfig(
             model_params=architecture_params,
             **training_params
@@ -192,17 +192,73 @@ class ModelRunner:
         if hasattr(ml_data, "forecast_period") and forecast_period != ml_data.forecast_period:
             processed_data = ml_data.get_data(forecast_period=forecast_period)
 
+        # --- Compute input/output shapes from processed_data first ---
+        x_shape = None
+        try:
+            x_train_obj = processed_data.get('x_train')
+            y_train_obj = processed_data.get('y_train')
+            # If x_train is a DataFrame or numpy array get shape directly
+            if hasattr(x_train_obj, "shape"):
+                x_shape = x_train_obj.shape
+            else:
+                # Fallback: try to infer from window dataset shape if provided
+                # (window datasets are in processed_data['train'], trainer will still re-infer)
+                x_shape = None
+        except Exception:
+            x_shape = None
+
+        if x_shape and len(x_shape) == 3:
+            input_shape = (x_shape[1], x_shape[2])
+        elif x_shape and len(x_shape) == 2:
+            # x_train DataFrame: (n_samples, n_features)
+            input_shape = (x_shape[1],)  # (n_features,)
+        else:
+            # Unknown shape: let trainer/model infer shapes from the tf.data dataset
+            input_shape = None
+
+        # Determine output size robustly
+        if hasattr(y_train_obj, "shape"):
+            if len(y_train_obj.shape) == 1:
+                output_size = 1
+            elif len(y_train_obj.shape) == 2:
+                output_size = y_train_obj.shape[1]
+            else:
+                output_size = None
+        else:
+            output_size = None
+
+        # Now populate feature set metadata reliably (use processed_data directly)
+        feature_names = None
+        n_features = None
+        if hasattr(processed_data.get('x_train'), 'columns'):
+            # pandas DataFrame
+            feature_names = list(processed_data['x_train'].columns)
+            n_features = processed_data['x_train'].shape[1]
+        elif x_shape and len(x_shape) >= 2:
+            # numpy array
+            n_features = x_shape[1]
+        # attach metadata
+
+        # config.model_params["feature_set_metadata"] = {
+        #     "n_features": int(n_features) if n_features is not None else None,
+        #     "feature_names": feature_names
+        # }
+
+        if isinstance(config.model_params, dict):
+            config.model_params["feature_set_metadata"] = {
+                'n_features': int(n_features) if n_features is not None else None,
+                'feature_names': feature_names
+            }
+
+        # config.feature_set_metadata = {
+        #     'n_features': int(n_features) if n_features is not None else None,
+        #     'feature_names': feature_names
+        # }
+
         # Train model
         trainer = ModelTrainer(config, verbose=self.verbose)
 
-        x_shape = processed_data['x_train'].shape
-        input_shape = (x_shape[1], x_shape[2]) if len(x_shape) == 3 else (x_shape[1], 1)
-
-        # input_shape = (processed_data['x_train'].shape[1], processed_data['x_train'].shape[2])
-        output_size = processed_data['y_train'].shape[1] if processed_data['y_train'].ndim > 1 else 1
-        # print(processed_data['x_train'].shape, processed_data['x_test'].shape)
-
-        # Train and evaluate
+        # If input_shape/output_size are None, ModelTrainer.train_model will infer from the windowed dataset
         trainer.train_model(model_name, processed_data, input_shape, output_size)
 
         # Show structure
@@ -222,20 +278,6 @@ class ModelRunner:
             y_pred = ml_data.inverse_transform(y_pred, target)
             y_true = ml_data.inverse_transform(y_true, target)
 
-
-        # print("processed_data)
-        # print("y_pred")
-        # print(y_pred[:5])
-        # print("y_true")
-        # print(y_true[:5])
-
-        # if ml_data.get_normalise():
-        #     target = ml_data.get_target()
-        #     params = ml_data.get_normalisation_params(target)
-        #     if params:
-        #         y_pred = (y_pred * params["std"]) + params["mean"]
-        #         y_true = (y_true * params["std"]) + params["mean"]
-
         # Prepare dates 
         dates_test = self._get_test_dates(ml_data)
 
@@ -243,7 +285,7 @@ class ModelRunner:
         print(f"Predictions shape: {y_pred.shape}")
         print(f"First 5 predictions: {y_pred[:5]}")
         print(f"Dates: {dates_test[:5]}")
-        
+
         return {
             "dates": dates_test,
             "actual": y_true.tolist(),
@@ -318,5 +360,4 @@ class ModelRunner:
             "estimated_mb": round(total_size / (1024 * 1024), 2),
             "cached_configs": len(self._data_cache)
         }
-    
-    
+
