@@ -122,7 +122,9 @@
         "function_parameters": {
           "num_lags": -10
         },
-        "input_data_fields": ["close"]
+        "input_data_fields": [
+          "close"
+        ]
       }
     ],
     "target": {
@@ -181,7 +183,9 @@
       {
         "name": "target",
         "function": "raw_data",
-        "input_data_fields": ["close"]
+        "input_data_fields": [
+          "close"
+        ]
       }
     ],
     "data_type": "daily"
@@ -635,22 +639,23 @@
     "data_type": "daily"
   },
   "Test_data": {
+    "name": "Test_data",
+    "data_type": "daily",
     "features": [
       {
-        "name": "value",
-        "input_data_fields": [
-          "value"
-        ],
-        "function": "raw_data"
-      },
-      {
-        "name": "target",
         "function": "raw_data",
         "input_data_fields": [
           "value"
-        ]
+        ],
+        "name": "value"
+      },
+      {
+        "function": "raw_data",
+        "input_data_fields": [
+          "value"
+        ],
+        "name": "target"
       }
-    ],
-    "data_type": "daily"
+    ]
   }
 }

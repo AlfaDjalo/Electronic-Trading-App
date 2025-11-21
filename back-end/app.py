@@ -1,7 +1,6 @@
 from flask import Flask, render_template, url_for, session, request, redirect
 from flask_cors import CORS
 from flask_bootstrap import Bootstrap
-from routes import setup_routes
 from api_routes import setup_api_routes
 
 app = Flask(__name__)
@@ -10,7 +9,6 @@ app.secret_key = 'your_secret_key'  # Add a secret key for session management
 # Allow all origins (for local dev)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 Bootstrap(app)
-# setup_routes(app)
 setup_api_routes(app)
 
 

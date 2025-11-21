@@ -1,7 +1,10 @@
 import json
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+FEATURE_SETS_FILE = os.path.join(BASE_DIR, "back-end", "data", "feature_sets.json")
 
 class FeatureSetManager:
-    # FEATURE_SETS_FILE = "c:\\Users\\David\\Projects\\Electronic Trading App\\data\\feature_sets.json"
 
     def __init__(self, filepath):
         self.filepath = filepath

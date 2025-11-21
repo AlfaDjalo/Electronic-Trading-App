@@ -2,6 +2,17 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 
+"""model_handler
+
+Legacy utilities and experiment helpers that construct, train and evaluate
+models directly. This module contains `ModelHandler`, a convenience wrapper
+used by older code paths for quick experiments. Newer code paths use
+`training.runner.ModelRunner` and `training.trainer.ModelTrainer`.
+
+The module also contains specialized LOB (Limit Order Book) helpers and
+helper functions to prepare LOB input tensors for CNN models.
+"""
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -25,6 +36,20 @@ from models import *
 # from models import Baseline, KerasLinearRegression, KerasLSTM, KerasCNN, KerasMLP
 
 class ModelHandler:
+    """Wrapper that exposes a collection of model-building and training
+    convenience functions used for experimentation.
+
+    Typical usage:
+        mh = ModelHandler(processed_data, params, target)
+        mh.build('lob_cnn')
+        mh.train_lob_cnn()
+
+    Public methods of interest:
+      - run_model(model_name): create and fit a model by name
+      - build(model_name): instantiate model architecture without fitting
+      - train_lob_cnn: LOB-specific training helper
+      - prepare_cnn_input / prepare_lob_data_for_cnn: helpers to form CNN input
+    """
     def __init__(self, processed_data, params, target, verbose=False):
     # def __init__(self, data, params, window_generator, target, verbose=False):
         # self.data = data

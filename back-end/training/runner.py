@@ -6,10 +6,30 @@ from models.factory import ModelFactory
 from training.trainer import ModelTrainer
 from process_data import DataProcessor
 
+"""training.runner
+
+Utilities to orchestrate running multiple models efficiently.
+
+This module provides `ModelRunner`, which groups models by data
+processing configuration, caches processed data to avoid redundant
+feature engineering and window building, and delegates per-model
+training/evaluation to `ModelTrainer`.
+
+Public classes:
+    - ModelRunner: group, process, train and aggregate model runs.
+"""
+
 class ModelRunner:
-    """
-    Handles running multiple models with shared data processing.
-    This reduced redundant data processing when running multiple models.
+    """Coordinate running multiple models and aggregate results.
+
+    Responsibilities:
+        - Group models by (featureSet, forecastPeriod, inputWidth, normalise)
+        - Build or reuse a cached `DataProcessor` per group
+        - For each model: create a `ModelConfig`, call `ModelTrainer` to train and evaluate
+        - Aggregate predictions, metrics and aligned label timestamps
+
+    The class aims to be robust: model failures are captured per-model while
+    allowing the remaining models to continue processing.
     """
 
     def __init__(self, raw_data, feature_set_manager, hyperparameters, verbose=False):
@@ -21,12 +41,11 @@ class ModelRunner:
         # Add caching for processed data
         self._data_cache = {}
 
-        # self.train_ratio, self.val_ratio, self.test_ratio = hyperparameters.get("train_val_test_split", [0.8, 0.1, 0.1])
-        
         ratios = hyperparameters.get("train_val_test_split", [0.8, 0.1, 0.1])
         if len(ratios) != 3:
             raise ValueError("train_val_test_split must have exactly 3 elements (train, val, test)")
         self.train_ratio, self.val_ratio, self.test_ratio = ratios
+
 
     def run_models(self, model_list):
         """
@@ -149,6 +168,7 @@ class ModelRunner:
 
         return groups
 
+
     def _process_data_for_config(self, config_key):
         """
         Process data for a specific configuration.
@@ -237,23 +257,12 @@ class ModelRunner:
         elif x_shape and len(x_shape) >= 2:
             # numpy array
             n_features = x_shape[1]
-        # attach metadata
-
-        # config.model_params["feature_set_metadata"] = {
-        #     "n_features": int(n_features) if n_features is not None else None,
-        #     "feature_names": feature_names
-        # }
 
         if isinstance(config.model_params, dict):
             config.model_params["feature_set_metadata"] = {
                 'n_features': int(n_features) if n_features is not None else None,
                 'feature_names': feature_names
             }
-
-        # config.feature_set_metadata = {
-        #     'n_features': int(n_features) if n_features is not None else None,
-        #     'feature_names': feature_names
-        # }
 
         # Train model
         trainer = ModelTrainer(config, verbose=self.verbose)
@@ -281,10 +290,10 @@ class ModelRunner:
         # Prepare dates 
         dates_test = self._get_test_dates(ml_data)
 
-        print(f"Model: {model_name}, Forecast Period: {forecast_period}")
-        print(f"Predictions shape: {y_pred.shape}")
-        print(f"First 5 predictions: {y_pred[:5]}")
-        print(f"Dates: {dates_test[:5]}")
+        # print(f"Model: {model_name}, Forecast Period: {forecast_period}")
+        # print(f"Predictions shape: {y_pred.shape}")
+        # print(f"First 5 predictions: {y_pred[:5]}")
+        # print(f"Dates: {dates_test[:5]}")
 
         return {
             "dates": dates_test,
@@ -313,14 +322,6 @@ class ModelRunner:
             start_idx = train_len + val_len
             return pd.to_datetime(date_series.iloc[start_idx:]).dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
 
-        # if "date" not in self.raw_data:
-        #     return []
-
-        # date_series = pd.to_datetime(self.raw_data["date"], errors="coerce")
-        # train_len = int(len(self.raw_data) * self.train_ratio)
-        # val_len = int(len(self.raw_data) * self.val_ratio)
-        # start_idx = train_len + val_len
-        # return pd.to_datetime(date_series.iloc[start_idx:]).dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
     
     def get_cache_info(self):
         """

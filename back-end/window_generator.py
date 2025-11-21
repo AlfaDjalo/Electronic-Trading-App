@@ -2,7 +2,21 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 
+"""Window generation helpers for time series.
+
+This module exposes `WindowGenerator`, a thin wrapper around
+`tf.keras.utils.timeseries_dataset_from_array` that computes
+input/label slices and returns `train`, `val` and `test` tf.data Datasets.
+"""
+
 class WindowGenerator():
+    """Create windowed tf.data datasets from pandas DataFrames.
+
+    The class computes index positions for inputs and labels based on the
+    input width, label width and shift (forecast horizon). It exposes
+    properties `train`, `val`, `test` which produce mapped datasets of
+    `(inputs, labels)` pairs ready for model training and evaluation.
+    """
     def __init__(self, input_width, label_width, shift,
                 train_df, val_df, test_df,
                 label_columns=["target"]):
