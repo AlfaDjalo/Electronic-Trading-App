@@ -78,6 +78,17 @@ export const Navbar = ( {menuOpen, setMenuOpen} ) => {
                         >
                             View Results
                         </NavLink>
+
+                        <NavLink
+                            to="/run_backtest"
+                            className={({ isActive }) =>
+                                isActive
+                                ? "text-white font-semibold"
+                                : "text-gray-300 hover:text-white transition-colors"
+                            }
+                        >
+                            Run Backtest
+                        </NavLink>
                     </div>
                 </div>
             </div>

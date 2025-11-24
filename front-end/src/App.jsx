@@ -12,6 +12,7 @@ import { ViewResults } from "./components/ViewResults";
 import { ModelSelect } from "./components/ModelSelect";
 import { FeatureSetManager } from "./components/FeatureSetManager";
 import { useModelConfig } from "./hooks/useModelConfig";
+import { BacktestSelect } from "./components/BacktestSelect";
 // import { ProcessData } from "./components/ProcessData";
 import { ModelRun } from "./components/ModelRun";
 // import { DisplayResults } from "./components/DisplayResults";
@@ -30,6 +31,7 @@ function App() {
   const [error, setError] = useState(null);
   const [availableFeatureSets, setAvailableFeatureSets] = useState([]);
   const [allFeatureSets, setAllFeatureSets] = useState([]);
+  const [backtestList, setBacktestList] = useState([]);
   // const [availableFeatureSets, setAvailableFeatureSets] = useState({});
   // const [allFeatureSets, setAllFeatureSets] = useState({});
   const [functionList, setFunctionList] = useState([])
@@ -67,6 +69,29 @@ function App() {
     console.log("Set parameters for:", model);
   };
   
+  const addBacktest = (newBT) => {
+    // Build base name (without number)
+    const baseName = `${newBT.model}`;
+
+    // Count existing models with this base name
+    const count = backtestList.filter(m => 
+      m.name && m.name.startsWith(baseName)
+    ).length;
+
+    // Create numbered name
+    const numberedName = `${baseName}_${count + 1}`;
+
+    // Assign the numbered name
+    const backtestWithNumberedName = { ...newBT, name: numberedName };
+
+    setBacktestList((prev) => [...prev, backtestWithNumberedName]);
+  };
+
+  // const addModel = (newModel) => setModelList((prev) => [...prev, newModel])
+  const deleteBacktest = (id) => setBacktestList((prev) => prev.filter((m) => m.id !== id));
+  const updateBacktest = (updated) =>
+    setBacktestList((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+
   useEffect(() => {
     // fetch list of backend-supported functions
     fetch("http://localhost:5000/api/functions")
@@ -292,6 +317,34 @@ function App() {
             }
           />
 
+          <Route
+            path="/run_backtest"
+            element={
+              results && rawData ? (
+                <div className="pt-20">
+                <BacktestSelect 
+                  modelList={modelList}
+                  backtestList={backtestList}
+                  onAddBacktest={addBacktest}
+                  onUpdateBacktest={updateBacktest}
+                  onDeleteBacktest={deleteBacktest}                  
+                />                </div>
+              ) : modelList.length > 0 && rawData ? (
+                // lazy-run models if possible
+                <BacktestSelect 
+                  modelList={modelList}
+                  backtestList={backtestList}
+                  onAddBacktest={addBacktest}
+                  onUpdateBacktest={updateBacktest}
+                  onDeleteBacktest={deleteBacktest}                  
+                />
+              ) : (
+                <p className="text-center mt-10">
+                  Please select models and upload data first.
+                </p>
+              )
+            }
+          />
           </Routes>
         </div >
     </Router>
