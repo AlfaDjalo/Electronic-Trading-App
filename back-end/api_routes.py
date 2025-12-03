@@ -29,16 +29,18 @@ from io import StringIO
 from feature_set import FeatureSetManager, FEATURE_SETS_FILE
 # from process_data import DataProcessor
 from services.model_service import process_models_request
+from backtesting.backtester import process_backtests
 # from routes import get_tickers_by_category
 # from flask import render_template, request, redirect, url_for, session, jsonify, send_file, send_from_directory  # Add this import for serving files
 
-DEBUG = True
+DEBUG = False #True
 
 AVAILABLE_FUNCTIONS = [
     "raw_data",
     "create_lag",
     "create_average",
     "create_lagged_average",
+    "create_moving_average",
     "create_rsi",
     "create_bollinger_bands",
 ]
@@ -267,6 +269,60 @@ def setup_api_routes(app):
                 "results": []
             }), 500
    
+
+    @app.route('/api/run_backtests', methods=['POST'])
+    def run_backtests():
+        """
+        API endpoint to run backtests on time series data.
+        """
+        # Handle CORS preflight
+        if request.method == "OPTIONS":
+            return jsonify({"status": "ok"}), 200
+        
+        # Parse request
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "No JSON data provided"}), 400
+        except Exception as e:
+            return jsonify({"error": f"Invalid JSON: {str(e)}"}), 400
+        
+        # Extract request components
+        predictions = data.get("predictions", [])
+        model_list = data.get("modelList", [])
+        backtest_list = data.get("backtestList", [])
+        
+        if DEBUG:
+            print("model_list")
+            print(model_list)
+            print("backtest_list")
+            print(backtest_list)
+            print("predictions")
+            print(predictions)
+            print("Top-level keys received:", list(data.keys()))
+        
+        try:
+            bt_results = process_backtests(predictions, backtest_list)
+                
+            if DEBUG:
+                print(bt_results)
+
+            return jsonify(bt_results), 200
+
+                
+        except ValueError as e:
+            # Client error (bad input)
+            return jsonify({"error": str(e)}), 400
+        
+        except Exception as e:
+            app.logger.exception("Unhandled exception in /api/run_models")
+            return jsonify({
+                "status": "error",
+                "error": str(e),
+                "results": []
+            }), 500
+   
+
 
 def load_file(fileName):
     """

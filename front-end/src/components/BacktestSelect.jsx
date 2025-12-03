@@ -1,10 +1,12 @@
 import { useState } from "react";
 
 import { BacktestForm } from "./BacktestForm";
+import { BacktestRun } from "./BacktestRun"; 
 
 export const BacktestSelect = ({
     modelList,
     backtestList,
+    results,
     onAddBacktest,
     onUpdateBacktest,
     onDeleteBacktest,
@@ -81,6 +83,28 @@ export const BacktestSelect = ({
                         ))}
                     </tbody>
                 </table>
+            )}
+
+            {backtestList.length > 0 && (
+                <div className="flex justify-center mt-6">
+                <button
+                    className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    onClick={async () => {
+                    try {
+                        // Pass all models to ModelRun
+                        const backtestResults = await BacktestRun(modelList, backtestList, results); 
+                        console.log("Run backtest results:", backtestResults);
+                        // setResults(results);            // save in App.js state
+                        // navigate("/view_results");   // go to results page
+                        // TODO: handle displaying results in your UI
+                    } catch (err) {
+                        console.error("Error running models:", err);
+                    }
+                    }}
+                >
+                    Run Backtests
+                </button>
+                </div>
             )}
         </div>
     )

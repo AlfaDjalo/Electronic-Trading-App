@@ -31,14 +31,14 @@ export const BacktestForm = ({
             setSelectedModel(iv.modelName);
         }
 
-        setInitialCash(iv.initialCash || 100000);
+        setInitialCash(iv.initialCash || 1000);
         setTransactionCost(iv.transactionCost || 0.0005);
         setSlippage(iv.slippage || 0.0002);
         setPositionSizing(iv.positionSizing || "full");
         setMaxPositions(iv.maxPositions || 1);
         setDelay(iv.delay || 1);
-        setStopLoss(iv.stopLoss || 0);
-        setTakeProfit(iv.takeProfit || 0);
+        setStopLoss(iv.stopLoss || -20);
+        setTakeProfit(iv.takeProfit || 20);
     }, [initialValues]);
 
     const handleSubmit = (e) => {

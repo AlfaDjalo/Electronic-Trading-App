@@ -325,6 +325,7 @@ function App() {
                 <BacktestSelect 
                   modelList={modelList}
                   backtestList={backtestList}
+                  results={results}
                   onAddBacktest={addBacktest}
                   onUpdateBacktest={updateBacktest}
                   onDeleteBacktest={deleteBacktest}                  
@@ -334,6 +335,7 @@ function App() {
                 <BacktestSelect 
                   modelList={modelList}
                   backtestList={backtestList}
+                  results={results}
                   onAddBacktest={addBacktest}
                   onUpdateBacktest={updateBacktest}
                   onDeleteBacktest={deleteBacktest}                  
