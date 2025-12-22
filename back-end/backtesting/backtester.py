@@ -52,6 +52,7 @@ def apply_strategy(preds, actuals, dates, params):
     cash = params["initialCash"]
     execution_delay = params["delay"]
     transaction_cost = params["transactionCost"]
+    trade_threshold = params["tradeThreshold"]
     # slippage = params["slippage"]
 
     position = 0
@@ -94,7 +95,8 @@ def apply_strategy(preds, actuals, dates, params):
 
         equity.append({
             "date": dates[t],
-            "value": portfolio_value
+            "value": portfolio_value,
+            "position": position
         })
 
         # total_return = equity[-1] / equity[0] - 1
@@ -107,7 +109,7 @@ def apply_strategy(preds, actuals, dates, params):
 
         if position == 0:
             if time_out > execution_delay:
-                if check_entry(price, prediction):
+                if check_entry(price, prediction, trade_threshold):
                     position = cash / (price * (1 + transaction_cost))
                     cash = 0
                     entry_price = price
@@ -144,7 +146,7 @@ def apply_strategy(preds, actuals, dates, params):
                 time_out = 0
                 print("Taking profit.")
                 continue
-            elif (check_exit(price, prediction)):
+            elif (check_exit(price, prediction, trade_threshold)):
                 trades.append({
                     "date": dates[t],
                     "buy/sell:": "sell",
@@ -179,7 +181,8 @@ def apply_strategy(preds, actuals, dates, params):
     
     equity.append({
         "date": dates[-1],
-        "value": portfolio_value
+        "value": portfolio_value,
+        "position": 0
     })
 
     stats = calculate_stats(equity, trades)
@@ -206,8 +209,8 @@ def calculate_stats(equity_curve, trades):
        "win_rate": 0.6
     }
 
-def check_entry(price, prediction):
-    if prediction > price:
+def check_entry(price, prediction, trade_threshold):
+    if prediction > price * (1 + trade_threshold):
         return True
     else:
         return False 
@@ -236,8 +239,8 @@ def check_take_profit(position, entry_price, price, params):
         return False
 
 
-def check_exit(price, prediction):
-    if prediction < price:
+def check_exit(price, prediction, trade_threshold):
+    if prediction < price * (1 - trade_threshold):
         return True
     else:
         return False 

@@ -87,7 +87,18 @@ export const Navbar = ( {menuOpen, setMenuOpen} ) => {
                                 : "text-gray-300 hover:text-white transition-colors"
                             }
                         >
-                            Run Backtest
+                            Select Backtest
+                        </NavLink>
+
+                        <NavLink
+                            to="/view_backtests"
+                            className={({ isActive }) =>
+                                isActive
+                                ? "text-white font-semibold"
+                                : "text-gray-300 hover:text-white transition-colors"
+                            }
+                        >
+                            View Backtests
                         </NavLink>
                     </div>
                 </div>

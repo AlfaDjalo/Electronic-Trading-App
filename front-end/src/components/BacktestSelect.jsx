@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { BacktestForm } from "./BacktestForm";
-import { BacktestRun } from "./BacktestRun"; 
+import { BacktestRun } from "./BacktestRun";
 
 export const BacktestSelect = ({
     modelList,
@@ -10,8 +11,10 @@ export const BacktestSelect = ({
     onAddBacktest,
     onUpdateBacktest,
     onDeleteBacktest,
+    setBacktestResults,
 }) => {
     const [editingBacktest, setEditingBacktest] = useState(null);
+    const navigate = useNavigate();
 
     const handleAdd = (newBT) => {
         const withId = { ...newBT, id: newBT.id ?? Date.now() };
@@ -43,13 +46,13 @@ export const BacktestSelect = ({
                 <p className="text-gray-500">No backtests yet.</p>
             ) : (
                 <table className="w-full border-collapse border border-gray-300 text-black">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border p-2">Model Name</th>
-                            <th className="border p-2">Backtest Parameters</th>
-                            <th className="border p-2">Actions</th>
-                        </tr>
-                    </thead>
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="border p-2">Model Name</th>
+                                    <th className="border p-2">Backtest Parameters</th>
+                                    <th className="border p-2">Actions</th>
+                                </tr>
+                            </thead>
 
                     <tbody>
                         {backtestList.map((bt) => (
@@ -91,14 +94,14 @@ export const BacktestSelect = ({
                     className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                     onClick={async () => {
                     try {
-                        // Pass all models to ModelRun
-                        const backtestResults = await BacktestRun(modelList, backtestList, results); 
-                        console.log("Run backtest results:", backtestResults);
-                        // setResults(results);            // save in App.js state
-                        // navigate("/view_results");   // go to results page
-                        // TODO: handle displaying results in your UI
+                        // Call backend to run backtests
+                        const backtestResults = await BacktestRun(modelList, backtestList, results);
+                        // Save to app state via setter provided by App
+                        if (setBacktestResults) setBacktestResults(backtestResults);
+                        // Navigate to results page
+                        navigate("/view_backtests");
                     } catch (err) {
-                        console.error("Error running models:", err);
+                        console.error("Error running backtests:", err);
                     }
                     }}
                 >

@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
 import './App.css'
 import "./index.css"
 
@@ -13,6 +15,7 @@ import { ModelSelect } from "./components/ModelSelect";
 import { FeatureSetManager } from "./components/FeatureSetManager";
 import { useModelConfig } from "./hooks/useModelConfig";
 import { BacktestSelect } from "./components/BacktestSelect";
+import BacktestResults from "./components/BacktestResults";
 // import { ProcessData } from "./components/ProcessData";
 import { ModelRun } from "./components/ModelRun";
 // import { DisplayResults } from "./components/DisplayResults";
@@ -32,10 +35,12 @@ function App() {
   const [availableFeatureSets, setAvailableFeatureSets] = useState([]);
   const [allFeatureSets, setAllFeatureSets] = useState([]);
   const [backtestList, setBacktestList] = useState([]);
+  const [backtestResults, setBacktestResults] = useState(null);
   // const [availableFeatureSets, setAvailableFeatureSets] = useState({});
   // const [allFeatureSets, setAllFeatureSets] = useState({});
   const [functionList, setFunctionList] = useState([])
-
+  const basename =
+    import.meta.env.DEV ? "/" : "/electronic-trading-app";
   // const modelNames = ["Baseline", "LSTM", "CNN", "MLP"]
   // const featureSets = ["Limit_Order_Book", "Cut_Down_Limit_Order_Book", "Sandbox_Intraday"]
   // const [selectedFeatures, setSelectedFeatures] = useState([]);
@@ -197,7 +202,8 @@ function App() {
       const modelNames = Object.keys(modelConfig);
 
       return (
-        <Router>
+        // <Router>
+        <Router basename={basename}>  
         {/* Always visible */}
         <Navbar menuOpen={menuOpen} setMenuOpen={setMenuOpen}/>
         <MobileMenu menuOpen={menuOpen} setMenuOpen={setMenuOpen}/>
@@ -328,8 +334,10 @@ function App() {
                   results={results}
                   onAddBacktest={addBacktest}
                   onUpdateBacktest={updateBacktest}
-                  onDeleteBacktest={deleteBacktest}                  
-                />                </div>
+                  onDeleteBacktest={deleteBacktest}
+                  setBacktestResults={setBacktestResults}
+                />
+                </div>
               ) : modelList.length > 0 && rawData ? (
                 // lazy-run models if possible
                 <BacktestSelect 
@@ -344,6 +352,19 @@ function App() {
                 <p className="text-center mt-10">
                   Please select models and upload data first.
                 </p>
+              )
+            }
+          />
+
+          <Route
+            path="/view_backtests"
+            element={
+              backtestResults && rawData ? (
+                <div className="pt-20">
+                  <BacktestResults backtestResults={backtestResults} />
+                </div>
+              ) : (
+                <p className="text-center mt-10">Please run backtests to view results.</p>
               )
             }
           />

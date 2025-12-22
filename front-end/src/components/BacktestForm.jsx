@@ -15,7 +15,7 @@ export const BacktestForm = ({
     // Backtesting parameters (shared across all models)
     const [initialCash, setInitialCash] = useState(safeInitial.initialCash || 100000);
     const [transactionCost, setTransactionCost] = useState(safeInitial.transactionCost || 0.0005);
-    const [slippage, setSlippage] = useState(safeInitial.slippage || 0.0002);
+    const [tradeThreshold, setTradeThreshold] = useState(safeInitial.tradeThreshold || 0.0002);
     const [positionSizing, setPositionSizing] = useState(safeInitial.positionSizing || "full");
     const [maxPositions, setMaxPositions] = useState(safeInitial.maxPositions || 1);
     const [delay, setDelay] = useState(safeInitial.delay || 1);
@@ -33,7 +33,7 @@ export const BacktestForm = ({
 
         setInitialCash(iv.initialCash || 1000);
         setTransactionCost(iv.transactionCost || 0.0005);
-        setSlippage(iv.slippage || 0.0002);
+        setTradeThreshold(iv.tradeThreshold || 0.01);
         setPositionSizing(iv.positionSizing || "full");
         setMaxPositions(iv.maxPositions || 1);
         setDelay(iv.delay || 1);
@@ -51,7 +51,7 @@ export const BacktestForm = ({
             backtestParams: {
                 initialCash,
                 transactionCost,
-                slippage,
+                tradeThreshold,
                 positionSizing,
                 maxPositions,
                 delay,
@@ -164,13 +164,13 @@ export const BacktestForm = ({
 
                 <div>
                     <label className="block mb-1 text-sm font-medium text-gray-700">
-                        Slippage (fraction)
+                        Trade Threshold (fraction)
                     </label>
                     <input
                         type="number"
                         step="0.0001"
-                        value={slippage}
-                        onChange={(e) => setSlippage(Number(e.target.value))}
+                        value={tradeThreshold}
+                        onChange={(e) => setTradeThreshold(Number(e.target.value))}
                         className="w-full border border-gray-300 rounded px-3 py-2 text-black bg-white"
                     />
                 </div>
@@ -256,7 +256,7 @@ export const BacktestForm = ({
                         // setBacktestParams({});
                         setInitialCash(100000);
                         setTransactionCost(0.0005);
-                        setSlippage(0.0002);
+                        setTradeThreshold(0.01);
                         setPositionSizing("full");
                         setMaxPositions(1);
                         setDelay(1);

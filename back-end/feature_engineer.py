@@ -1,3 +1,7 @@
+import pandas as pd
+import numpy as np
+import ta
+
 class FeatureEngineer:
     def __init__(self, raw_df, feature_set_config):
         print("Creating FeatureEngineer.")
@@ -120,6 +124,28 @@ class FeatureEngineer:
         except Exception as e:
             raise RuntimeError(f"Error during average calculation: {e}")
 
+    def create_moving_average(self, input_fields, window, alpha=1.0):
+        """
+        Calculate a moving average of the specified input field.
+
+        Args:
+            input_field: The column name to create the moving average for.
+            window (int): Number of lagged periods to create.
+            exponential_weight (float): Weighting for exponentially weighted moving average.
+            **kwargs: Additional arguments (not used here).
+
+        Returns:
+            pd.Series: A series containing the average of the input fields.
+        """
+        series = self.data[input_fields[0]]
+
+        if alpha == 1.0:
+            # Use ta library's SMA for consistency with your other code
+            return ta.trend.sma_indicator(series, window=window)
+        else:
+            # Custom-alpha EWMA (ta does not expose custom alpha, so use pandas)
+            return series.ewm(alpha=alpha, adjust=False).mean()
+
     def create_lagged_average(self, input_fields, num_lags=1, **kwargs):
         """
         Calculate the average of the specified input fields
@@ -150,6 +176,32 @@ class FeatureEngineer:
             raise RuntimeError(f"Error during average calculation: {e}")
 
     def create_rsi(self, input_field, window=20):
+        """
+        Calculate the RSI (Relative Strength Index) for one field or
+        for the average of multiple fields.
+
+        Args:
+            input_field (str or list): Column name(s) to calculate RSI on.
+            window (int): RSI calculation window.
+
+        Returns:
+            pd.Series: RSI values.
+        """
+
+        # Case 1: single field (string)
+        if isinstance(input_field, str):
+            series_data = self.data[input_field]
+
+        # Case 2: multiple fields (list)
+        elif isinstance(input_field, (list, tuple)):
+            series_data = self.create_average(input_field)
+
+        else:
+            raise ValueError("input_field must be a string or list of strings.")
+
+        return ta.momentum.RSIIndicator(close=series_data, window=window).rsi()
+
+    def create_rsi_old(self, input_field, window=20):
         """
         Calculate the RSI (Relative Strength Indicator) of the specified input fields.
 

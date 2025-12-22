@@ -367,7 +367,7 @@
     ],
     "target": {
       "input_data_fields": [
-        "mid_price"
+        "bid_price"
       ],
       "function": "create_lag",
       "function_parameters": {
@@ -429,41 +429,56 @@
     }
   },
   "Technical_Analysis_-_RSI": {
+    "name": "Technical_Analysis_-_RSI",
     "data_type": "intraday",
     "features": [
       {
+        "id": 1764828973572,
         "name": "mid_price",
         "input_data_fields": [
-          "mid_price"
+          "ask_price_0",
+          "bid_price_0"
         ],
-        "function": "raw_data"
+        "function": "create_average",
+        "function_parameters": {}
       },
       {
+        "id": 1764829105723,
         "name": "rsi",
         "input_data_fields": [
-          "mid_price"
+          "ask_price_0",
+          "bid_price_0"
         ],
         "function": "create_rsi",
         "function_parameters": {
           "window": 20
         }
+      },
+      {
+        "name": "target",
+        "input_data_fields": [
+          "ask_price_0",
+          "bid_price_0"
+        ],
+        "function": "create_average",
+        "function_parameters": {}
       }
     ],
     "target": {
-      "input_data_fields": [
-        "mid_price"
-      ],
       "function": "create_lag",
       "function_parameters": {
         "num_lags": -10
-      }
+      },
+      "input_data_fields": [
+        "bid_price_0"
+      ]
     }
   },
   "Technical_Analysis_-_MACD": {
     "data_type": "intraday",
     "features": [
       {
-        "name": "mid_price",
+        "name": "bid_price_0",
         "input_data_fields": [
           "mid_price"
         ],
@@ -472,7 +487,7 @@
       {
         "name": "macd",
         "input_data_fields": [
-          "mid_price"
+          "bid_price_0"
         ],
         "function": "create_macd",
         "function_parameters": {
@@ -484,7 +499,7 @@
     ],
     "target": {
       "input_data_fields": [
-        "mid_price"
+        "bid_price_0"
       ],
       "function": "create_lag",
       "function_parameters": {
